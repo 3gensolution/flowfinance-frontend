@@ -1,0 +1,609 @@
+"use client";
+
+import React, { useState } from "react";
+import {
+  Box,
+  Button,
+  Typography,
+  TextField,
+  Select,
+  MenuItem,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
+  Slider,
+  Card,
+  Divider,
+  FormControl,
+  InputAdornment,
+} from "@mui/material";
+import {
+  ArrowBack,
+  AccountBalanceWallet,
+  Tune,
+  Shield,
+  Info,
+  LocalGasStation,
+} from "@mui/icons-material";
+import { LandingNavbar, StyledLink } from "@/ui/modules/components";
+import Link from "next/link";
+
+export const LenderOfferPage: React.FC = () => {
+  const [asset, setAsset] = useState("USDC");
+  const [amount, setAmount] = useState("1000.00");
+  const [duration, setDuration] = useState("30");
+  const [apy, setApy] = useState(12.5);
+  const [collateral, setCollateral] = useState("any");
+  const [ltv, setLtv] = useState(150);
+
+  const calculateProjectedEarnings = () => {
+    const principal = parseFloat(amount) || 0;
+    const daysMap: { [key: string]: number } = { "7": 7, "30": 30, "90": 90 };
+    const days = daysMap[duration] || 30;
+    return (principal * (apy / 100) * (days / 365)).toFixed(2);
+  };
+
+  const projectedEarnings = calculateProjectedEarnings();
+  const totalReturn = (parseFloat(amount) + parseFloat(projectedEarnings)).toFixed(2);
+
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        backgroundColor: "#111418",
+        color: "#fff",
+        fontFamily: "'Inter', sans-serif",
+        pt: 12,
+      }}
+    >
+      {/* Header */}
+      <LandingNavbar />
+
+      {/* Main Content */}
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          py: { xs: 2, lg: 3 },
+          px: { xs: 1, lg: 2 },
+        }}
+      >
+        <Box 
+          sx={{ 
+            maxWidth: '1920px', 
+            width: "100%", 
+            display: "flex", 
+            flexDirection: "column", 
+            gap: 4,
+            padding: {
+              sm: '0 24px',
+              md: '0 48px',
+              lg: '0 64px',
+              xl: '0 96px',
+            },
+          }}
+        >
+          {/* Page Heading */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: "#2b8cee", fontSize: "0.875rem", fontWeight: 500, mb: 0.5 }}>
+              <ArrowBack sx={{ fontSize: "1.125rem" }} />
+              <StyledLink
+                href="/lender-dashboard"
+                sx={{ color: "#2b8cee", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
+              >
+                Back to Dashboard
+              </StyledLink>
+            </Box>
+            <Typography sx={{ fontSize: { xs: "1.875rem", lg: "2.25rem" }, fontWeight: 900, letterSpacing: "-0.033em" }}>
+              New Lending Offer
+            </Typography>
+            <Typography sx={{ color: "#9dabb9", fontSize: "1rem", fontWeight: 400 }}>
+              Define your lending terms to create a marketplace offer for borrowers.
+            </Typography>
+          </Box>
+
+          {/* Content Grid */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", lg: "repeat(12, 1fr)" },
+              gap: 4,
+              alignItems: "start",
+            }}
+          >
+            {/* Left Column: Form */}
+            <Box sx={{ gridColumn: { xs: "1", lg: "span 8" }, display: "flex", flexDirection: "column", gap: 4 }}>
+              {/* Section 1: Loan Details */}
+              <Card
+                sx={{
+                  background: "#1c2127",
+                  border: "1px solid #283039",
+                  borderRadius: "12px",
+                  p: { xs: 1.5, lg: 2 },
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                  <AccountBalanceWallet sx={{ color: "#2b8cee", fontSize: "1.5rem" }} />
+                  <Typography sx={{ color: "#fff", fontSize: "1.125rem", fontWeight: "bold" }}>
+                    Loan Details
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 2 }}>
+                  {/* Asset Select */}
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
+                    <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
+                      I want to lend
+                    </Typography>
+                    <FormControl variant="outlined" size="small">
+                      <Select
+                        value={asset}
+                        onChange={(e) => setAsset(e.target.value)}
+                        sx={{
+                          color: "#fff",
+                          borderRadius: "8px",
+                          height: 56,
+                          backgroundColor: "#111418",
+                          border: "1px solid #3b4754",
+                          fontSize: "1rem",
+                          fontWeight: 400,
+                          "&:hover": { borderColor: "#3b4754" },
+                          "& .MuiOutlinedInput-notchedOutline": { borderColor: "#3b4754" },
+                          "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#2b8cee", borderWidth: 1 },
+                          "&.Mui-focused": { boxShadow: "0 0 0 3px rgba(43,140,238,0.1)" },
+                        }}
+                      >
+                        <MenuItem value="USDC">USDC (USD Coin)</MenuItem>
+                        <MenuItem value="DAI">DAI (Dai Stablecoin)</MenuItem>
+                        <MenuItem value="WETH">WETH (Wrapped Ether)</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+
+                  {/* Amount Input */}
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
+                        Amount
+                      </Typography>
+                    </Box>
+                    <TextField
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      InputProps={{
+                        endAdornment: (
+                          <Button
+                            sx={{
+                              ml: 1,
+                              px: 1.5,
+                              height: 40,
+                              fontSize: "0.75rem",
+                              fontWeight: "bold",
+                              color: "#2b8cee",
+                              backgroundColor: "rgba(43,140,238,0.1)",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              "&:hover": { backgroundColor: "rgba(43,140,238,0.2)" },
+                            }}
+                          >
+                            Max
+                          </Button>
+                        ),
+                      }}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          color: "#fff",
+                          height: 56,
+                          borderRadius: "8px",
+                          backgroundColor: "#111418",
+                          border: "1px solid #3b4754",
+                          fontSize: "1rem",
+                          fontWeight: 400,
+                          "& fieldset": { borderColor: "#3b4754" },
+                          "&:hover fieldset": { borderColor: "#3b4754" },
+                          "&.Mui-focused fieldset": { borderColor: "#2b8cee", borderWidth: 1 },
+                        },
+                        "& input::placeholder": { color: "#9dabb9" },
+                      }}
+                    />
+                    <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                      <Typography sx={{ color: "#9dabb9", fontSize: "0.75rem" }}>
+                        Available: 1,204.55 USDC
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Card>
+
+              {/* Section 2: Terms & Rates */}
+              <Card
+                sx={{
+                  background: "#1c2127",
+                  border: "1px solid #283039",
+                  borderRadius: "12px",
+                  p: { xs: 1.5, lg: 2 },
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                  <Tune sx={{ color: "#2b8cee", fontSize: "1.5rem" }} />
+                  <Typography sx={{ color: "#fff", fontSize: "1.125rem", fontWeight: "bold" }}>
+                    Terms & Rates
+                  </Typography>
+                </Box>
+
+                {/* Duration */}
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                  <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
+                    Loan Duration
+                  </Typography>
+                  <RadioGroup
+                    row
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
+                      gap: 1,
+                    }}
+                  >
+                    {[
+                      { value: "7", label: "7 Days" },
+                      { value: "30", label: "30 Days" },
+                      { value: "90", label: "90 Days" },
+                      { value: "custom", label: "Custom" },
+                    ].map((option) => (
+                      <FormControlLabel
+                        key={option.value}
+                        value={option.value}
+                        control={<Radio sx={{ display: "none" }} />}
+                        label={
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              height: 48,
+                              borderRadius: "8px",
+                              border: "1px solid #3b4754",
+                              backgroundColor: "#111418",
+                              color: "#9dabb9",
+                              transition: "all 0.2s",
+                              cursor: "pointer",
+                              width: "100%",
+                              ...(duration === option.value && {
+                                borderColor: "#2b8cee",
+                                backgroundColor: "rgba(43,140,238,0.1)",
+                                color: "#2b8cee",
+                              }),
+                              "&:hover": { borderColor: "rgba(43,140,238,0.5)" },
+                            }}
+                          >
+                            {option.label}
+                          </Box>
+                        }
+                        sx={{ m: 0, width: "100%" }}
+                      />
+                    ))}
+                  </RadioGroup>
+                </Box>
+
+                {/* APY Slider */}
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                    <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
+                      Annual Interest Rate (APY)
+                    </Typography>
+                    <TextField
+                      type="number"
+                      value={apy}
+                      onChange={(e) => setApy(parseFloat(e.target.value))}
+                      InputProps={{ startAdornment: <InputAdornment position="start">%</InputAdornment> }}
+                      sx={{
+                        width: 128,
+                        "& .MuiOutlinedInput-root": {
+                          color: "#fff",
+                          height: 40,
+                          borderRadius: "8px",
+                          backgroundColor: "#111418",
+                          border: "1px solid #3b4754",
+                          fontSize: "0.875rem",
+                          textAlign: "right",
+                          "& fieldset": { borderColor: "#3b4754" },
+                          "&:hover fieldset": { borderColor: "#3b4754" },
+                          "&.Mui-focused fieldset": { borderColor: "#2b8cee" },
+                        },
+                      }}
+                    />
+                  </Box>
+
+                  <Box sx={{ px: 1 }}>
+                    <Slider
+                      value={apy}
+                      onChange={(_, newValue) => setApy(newValue as number)}
+                      min={1}
+                      max={50}
+                      step={0.5}
+                      sx={{
+                        color: "#2b8cee",
+                        "& .MuiSlider-track": { backgroundColor: "#2b8cee", border: "none" },
+                        "& .MuiSlider-rail": { backgroundColor: "#3b4754" },
+                        "& .MuiSlider-thumb": {
+                          backgroundColor: "#2b8cee",
+                          boxShadow: "0 0 10px rgba(43,140,238,0.5)",
+                          "&:hover, &.Mui-focusVisible": { boxShadow: "0 0 15px rgba(43,140,238,0.7)" },
+                        },
+                      }}
+                    />
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1, fontSize: "0.75rem", color: "#9dabb9", fontWeight: 500 }}>
+                      <span>1%</span>
+                      <span>25%</span>
+                      <span>50%</span>
+                    </Box>
+                  </Box>
+                </Box>
+              </Card>
+
+              {/* Section 3: Collateral & Security */}
+              <Card
+                sx={{
+                  background: "#1c2127",
+                  border: "1px solid #283039",
+                  borderRadius: "12px",
+                  p: { xs: 1.5, lg: 2 },
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                  <Shield sx={{ color: "#2b8cee", fontSize: "1.5rem" }} />
+                  <Typography sx={{ color: "#fff", fontSize: "1.125rem", fontWeight: "bold" }}>
+                    Collateral & Security
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 2 }}>
+                  {/* Collateral Select */}
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
+                    <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
+                      Accepted Collateral
+                    </Typography>
+                    <FormControl variant="outlined" size="small">
+                      <Select
+                        value={collateral}
+                        onChange={(e) => setCollateral(e.target.value)}
+                        sx={{
+                          color: "#fff",
+                          borderRadius: "8px",
+                          height: 56,
+                          backgroundColor: "#111418",
+                          border: "1px solid #3b4754",
+                          fontSize: "1rem",
+                          fontWeight: 400,
+                          "&:hover": { borderColor: "#3b4754" },
+                          "& .MuiOutlinedInput-notchedOutline": { borderColor: "#3b4754" },
+                          "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#2b8cee", borderWidth: 1 },
+                          "&.Mui-focused": { boxShadow: "0 0 0 3px rgba(43,140,238,0.1)" },
+                        }}
+                      >
+                        <MenuItem value="any">Any Verified Asset</MenuItem>
+                        <MenuItem value="stable">Stablecoins Only</MenuItem>
+                        <MenuItem value="bluechip">Blue Chip (BTC/ETH)</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+
+                  {/* LTV Input */}
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
+                        Minimum LTV
+                      </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <Typography sx={{ fontSize: "0.75rem", fontWeight: 400, color: "#9dabb9", cursor: "help" }} title="The minimum value of collateral required relative to the loan amount.">
+                        (Loan to Value)
+                      </Typography>
+                      <Info sx={{ fontSize: "1rem", color: "#9dabb9", cursor: "help" }} />
+                    </Box>
+                    </Box>
+                    <TextField
+                      type="number"
+                      value={ltv}
+                      onChange={(e) => setLtv(parseInt(e.target.value))}
+                      InputProps={{
+                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                      }}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          color: "#fff",
+                          height: 56,
+                          borderRadius: "8px",
+                          backgroundColor: "#111418",
+                          border: "1px solid #3b4754",
+                          fontSize: "1rem",
+                          fontWeight: 400,
+                          "& fieldset": { borderColor: "#3b4754" },
+                          "&:hover fieldset": { borderColor: "#3b4754" },
+                          "&.Mui-focused fieldset": { borderColor: "#2b8cee", borderWidth: 1 },
+                        },
+                        "& input::placeholder": { color: "#9dabb9" },
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            {/* Right Column: Summary Sticky */}
+            <Box
+              sx={{
+                gridColumn: { xs: "1", lg: "span 4" },
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                position: { lg: "sticky" },
+                top: { lg: 32 },
+              }}
+            >
+              {/* Summary Card */}
+              <Card
+                sx={{
+                  background: "#1c2127",
+                  border: "1px solid #283039",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
+                }}
+              >
+                {/* Header */}
+                <Box sx={{ p: 1.5, borderBottom: "1px solid #283039", background: "rgba(28,33,39,0.5)" }}>
+                  <Typography sx={{ color: "#fff", fontSize: "1.125rem", fontWeight: "bold", mb: 0.5 }}>
+                    Offer Summary
+                  </Typography>
+                  <Typography sx={{ color: "#9dabb9", fontSize: "0.875rem" }}>
+                    Review your terms before publishing.
+                  </Typography>
+                </Box>
+
+                {/* Summary Items */}
+                <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography sx={{ color: "#9dabb9", fontSize: "0.875rem" }}>Principal Amount</Typography>
+                    <Typography sx={{ color: "#fff", fontWeight: 500 }}>{amount} {asset}</Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography sx={{ color: "#9dabb9", fontSize: "0.875rem" }}>Duration</Typography>
+                    <Typography sx={{ color: "#fff", fontWeight: 500 }}>
+                      {duration === "custom" ? "Custom" : duration + " Days"}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography sx={{ color: "#9dabb9", fontSize: "0.875rem" }}>APY</Typography>
+                    <Typography sx={{ color: "#10b981", fontWeight: 500 }}>{apy}%</Typography>
+                  </Box>
+
+                  <Divider sx={{ my: 1, backgroundColor: "#283039" }} />
+
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography sx={{ color: "#9dabb9", fontSize: "0.875rem" }}>Projected Earnings</Typography>
+                    <Typography sx={{ color: "#10b981", fontWeight: "bold" }}>+{projectedEarnings} {asset}</Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mt: 1,
+                      p: 1,
+                      background: "rgba(43,140,238,0.1)",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(43,140,238,0.2)",
+                    }}
+                  >
+                    <Typography sx={{ color: "#fff", fontSize: "0.875rem", fontWeight: 600 }}>
+                      Total Return
+                    </Typography>
+                    <Typography sx={{ color: "#fff", fontWeight: "bold", fontSize: "1.125rem" }}>
+                      {totalReturn} {asset}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Buttons */}
+                <Box sx={{ p: 1.5, pt: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+                  <Button
+                    fullWidth
+                    sx={{
+                      height: 48,
+                      borderRadius: "8px",
+                      background: "linear-gradient(to right, #10b981, #2b8cee)",
+                      color: "#fff",
+                      fontWeight: "bold",
+                      fontSize: "1rem",
+                      textTransform: "none",
+                      boxShadow: "0 0 20px rgba(43,140,238,0.3)",
+                      "&:hover": { opacity: 0.9 },
+                    }}
+                  >
+                    Publish Offer
+                  </Button>
+                  <Button
+                    fullWidth
+                    sx={{
+                      height: 48,
+                      borderRadius: "8px",
+                      background: "transparent",
+                      border: "1px solid #283039",
+                      color: "#9dabb9",
+                      fontWeight: 500,
+                      fontSize: "0.875rem",
+                      textTransform: "none",
+                      transition: "all 0.2s",
+                      "&:hover": {
+                        color: "#fff",
+                        borderColor: "#fff",
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                      },
+                    }}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 0.5, mt: 1 }}>
+                    <LocalGasStation sx={{ fontSize: "0.75rem", color: "#9dabb9" }} />
+                    <Typography sx={{ color: "#9dabb9", fontSize: "0.75rem" }}>
+                      Est. Network Fee: <span style={{ color: "#fff" }}>$0.45</span>
+                    </Typography>
+                  </Box>
+                </Box>
+              </Card>
+
+              {/* Helper Box */}
+              <Card
+                sx={{
+                  background: "rgba(28,33,39,0.3)",
+                  border: "1px dashed #283039",
+                  borderRadius: "12px",
+                  p: 1,
+                  display: "flex",
+                  gap: 1,
+                  alignItems: "flex-start",
+                }}
+              >
+                <Info sx={{ color: "#2b8cee", fontSize: "1.25rem", mt: 0.3, flexShrink: 0 }} />
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                  <Typography sx={{ color: "#fff", fontSize: "0.875rem", fontWeight: 600 }}>
+                    Smart Matching
+                  </Typography>
+                  <Typography sx={{ color: "#9dabb9", fontSize: "0.75rem", lineHeight: 1.4 }}>
+                    Your offer will be automatically matched with borrowers meeting your criteria. Funds are locked in the smart contract until maturity.
+                  </Typography>
+                </Box>
+              </Card>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Mobile Footer Spacer */}
+      <Box sx={{ height: 40, display: { xs: "block", lg: "none" } }} />
+    </Box>
+  );
+};
+
+export default LenderOfferPage;
