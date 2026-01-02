@@ -26,7 +26,6 @@ import {
   LocalGasStation,
 } from "@mui/icons-material";
 import { LandingNavbar, StyledLink } from "@/ui/modules/components";
-import Link from "next/link";
 
 export const LenderOfferPage: React.FC = () => {
   const [asset, setAsset] = useState("USDC");

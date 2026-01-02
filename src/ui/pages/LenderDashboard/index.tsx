@@ -287,7 +287,7 @@ export const LenderDashboardPage: React.FC = () => {
               Welcome back, Lender
             </Typography>
             <Typography sx={{ color: "#94a3b8", maxWidth: "45rem" }}>
-              Here's what's happening with your portfolio today. You have{" "}
+              Here&apos;s what&apos;s happening with your portfolio today. You have{" "}
               <span style={{ color: "#2b8cee", fontWeight: 500 }}>3 loans</span> nearing maturity.
             </Typography>
           </Box>
