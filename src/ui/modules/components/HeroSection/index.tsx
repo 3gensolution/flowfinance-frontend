@@ -29,6 +29,10 @@ export const HeroSection = () => {
     router.push(ROUTES_SPEC.marketplace);
   };
 
+  const handleStartBorrowing = () => {
+    router.push(ROUTES_SPEC.borrowerDashboard);
+  };
+
   return (
     <Box
       component="section"
@@ -181,6 +185,26 @@ export const HeroSection = () => {
                 }}
               >
                 View Markets
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleStartBorrowing}
+                sx={{
+                  height: 48,
+                  paddingX: 4,
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  backgroundColor: "rgba(255, 255, 255, 0.05)",
+                  borderColor: "rgba(255, 255, 255, 0.1)",
+                  color: "white",
+                  backdropFilter: "blur(10px)",
+                  "&:hover": {
+                    backgroundColor: "rgba(255, 255, 255, 0.1)",
+                    borderColor: "rgba(255, 255, 255, 0.2)",
+                  },
+                }}
+              >
+                Start Borrowing
               </Button>
             </Box>
 

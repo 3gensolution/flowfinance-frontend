@@ -25,9 +25,11 @@ import {
   Info,
   LocalGasStation,
 } from "@mui/icons-material";
-import { LandingNavbar, StyledLink } from "@/ui/modules/components";
+import { LandingNavbar } from "@/ui/modules/components";
+import { useRouter } from "next/navigation";
 
 export const LenderOfferPage: React.FC = () => {
+  const router = useRouter();
   const [asset, setAsset] = useState("USDC");
   const [amount, setAmount] = useState("1000.00");
   const [duration, setDuration] = useState("30");
@@ -87,15 +89,21 @@ export const LenderOfferPage: React.FC = () => {
         >
           {/* Page Heading */}
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: "#2b8cee", fontSize: "0.875rem", fontWeight: 500, mb: 0.5 }}>
-              <ArrowBack sx={{ fontSize: "1.125rem" }} />
-              <StyledLink
-                href="/lender-dashboard"
-                sx={{ color: "#2b8cee", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
-              >
-                Back to Dashboard
-              </StyledLink>
-            </Box>
+            <Button
+              sx={{ 
+                color: "#2b8cee", 
+                background: "none",
+                padding: 0, 
+                width: 'fit-content',
+                "&:hover": { 
+                  textDecoration: "underline" 
+                } 
+              }}
+              startIcon={<ArrowBack sx={{ fontSize: "1.125rem" }} />}
+              onClick={() => router.back() }
+            >
+              Back to Dashboard
+            </Button>
             <Typography sx={{ fontSize: { xs: "1.875rem", lg: "2.25rem" }, fontWeight: 900, letterSpacing: "-0.033em" }}>
               New Lending Offer
             </Typography>

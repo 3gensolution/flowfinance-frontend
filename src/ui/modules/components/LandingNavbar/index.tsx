@@ -4,32 +4,27 @@ import {
   AppBar,
   Toolbar,
   Box,
-  Link,
   IconButton,
   Drawer,
-  List,
-  ListItem,
-  ListItemText,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import { useState } from "react";
-import NextLink from "next/link";
+// import NextLink from "next/link";
 import CloseIcon from "@mui/icons-material/Close";
-import { ROUTES_SPEC } from "@/common/constants/routes";
+// import { ROUTES_SPEC } from "@/common/constants/routes";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { StyledLink } from "../StyledLink";
 
 export const LandingNavbar = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  // const theme = useTheme();
+  // const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navLinks = [
-    { label: "Market", href: ROUTES_SPEC.marketplace },
-    { label: "Dashboard", href: ROUTES_SPEC.borrowerDashboard },
-    { label: "Governance", href: "#" },
-    { label: "Docs", href: "#" },
-  ];
+  // const navLinks = [
+  //   // { label: "Market", href: ROUTES_SPEC.marketplace },
+  //   // { label: "Dashboard", href: ROUTES_SPEC.borrowerDashboard },
+  //   // { label: "Governance", href: "#" },
+  //   // { label: "Docs", href: "#" },
+  // ];
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -43,13 +38,13 @@ export const LandingNavbar = () => {
       >
         <CloseIcon />
       </IconButton>
-      <List>
+      {/* <List>
         {navLinks.map((link) => (
           <ListItem key={link.label} component={NextLink} href={link.href}>
             <ListItemText primary={link.label} />
           </ListItem>
         ))}
-      </List>
+      </List> */}
     </Box>
   );
 
@@ -81,7 +76,7 @@ export const LandingNavbar = () => {
         }}
       >
         {/* Logo */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <StyledLink href='/' sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Box
             sx={{
               width: 32,
@@ -109,10 +104,10 @@ export const LandingNavbar = () => {
           >
             FlowFinance
           </Box>
-        </Box>
+        </StyledLink>
 
         {/* Desktop Navigation */}
-        {!isMobile && (
+        {/* {!isMobile && (
           <Box sx={{ display: "flex", gap: 4 }}>
             {navLinks.map((link) => (
               <Link
@@ -134,7 +129,7 @@ export const LandingNavbar = () => {
               </Link>
             ))}
           </Box>
-        )}
+        )} */}
         <ConnectButton />
       </Toolbar>
       {/* Mobile Drawer */}
