@@ -2,7 +2,6 @@
 
 import {
   Box,
-  Button,
   Typography,
   Stack,
 } from "@mui/material";
@@ -29,6 +28,8 @@ import {
   TrendingDown,
   Lock,
 } from "@mui/icons-material";
+import { AppButton } from "@/ui/modules/components";
+import { toast } from "sonner";
 
 // Mock loan data
 const mockLoans: LoanRecord[] = [
@@ -70,7 +71,7 @@ const mockPendingRequests: PendingRequest[] = [
 export const BorrowerDashboardPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState("Dashboard");
 
-  return (
+  return ( 
     <Box sx={{ display: "flex", height: "100vh", width: "100%", bg: "#101922" }}>
       {/* Sidebar */}
       <BorrowerDashboardSidebar
@@ -98,7 +99,7 @@ export const BorrowerDashboardPage: React.FC = () => {
             flex: 1,
             overflowY: "auto",
             overflowX: "hidden",
-            p: { xs: 2, lg: 5 },
+            p: { xs: 2, lg: '30px' },
             backgroundColor: "#101922",
             "&::-webkit-scrollbar": {
               width: "8px",
@@ -115,7 +116,7 @@ export const BorrowerDashboardPage: React.FC = () => {
             },
           }}
         >
-          <Box sx={{ maxWidth: "1280px", mx: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+          <Box sx={{  mx: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
             {/* Page Heading */}
             <Box
               sx={{
@@ -127,7 +128,7 @@ export const BorrowerDashboardPage: React.FC = () => {
               }}
             >
               <Stack gap={0.5}>
-                <Typography
+                {/* <Typography
                   sx={{
                     fontSize: { xs: "1.875rem", md: "2.25rem" },
                     fontWeight: "900",
@@ -136,36 +137,24 @@ export const BorrowerDashboardPage: React.FC = () => {
                   }}
                 >
                   Borrower Dashboard
-                </Typography>
+                </Typography> */}
                 <Typography sx={{ color: "#a0adb8", fontSize: { xs: "0.875rem", md: "1rem" } }}>
-                  Monitor your active loans, health factors, and pending requests.
+                  This is your personalized dashboard.
                 </Typography>
               </Stack>
 
-              <Button
+              <AppButton
                 variant="contained"
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
                   backgroundColor: "#2b8cee",
                   color: "white",
-                  px: 3,
-                  py: 1.5,
-                  borderRadius: "0.5rem",
-                  fontWeight: "bold",
-                  textTransform: "none",
                   boxShadow: "0 4px 12px rgba(43, 140, 238, 0.2)",
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: "#1e7dd6",
-                    boxShadow: "0 6px 16px rgba(43, 140, 238, 0.3)",
-                  },
                 }}
+                startIcon={<AccountBalanceWallet />}
+                onClick={() => toast.success("Borrow New Asset")}
               >
-                <span style={{ fontSize: "20px" }}>➕</span>
-                <span>Borrow New Asset</span>
-              </Button>
+                Borrow Asset
+              </AppButton>
             </Box>
 
             {/* Stats Cards */}
