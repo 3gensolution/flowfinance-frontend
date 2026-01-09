@@ -6,9 +6,10 @@ import {
   Typography,
   Card,
   Pagination,
+  CircularProgress,
 } from "@mui/material";
-import { useState } from "react";
-import { LoanCard, LoanCardProps } from "../../modules/components/LoanCard";
+import { useState, useMemo } from "react";
+import { LoanCard } from "../../modules/components/LoanCard";
 import {
   FiltersSection,
   FiltersState,
@@ -18,112 +19,7 @@ import {
   ViewMode,
 } from "../../modules/components/MarketplaceToolbar";
 import { LandingNavbar } from "@/ui/modules/components";
-
-// Mock loan data
-const mockLoans: LoanCardProps[] = [
-  {
-    id: "1",
-    borrowerAddress: "0x4a...8e21",
-    isVerified: true,
-    timeAgo: "2h ago",
-    riskLevel: "Low",
-    borrowAmount: 5000,
-    borrowToken: "USDC",
-    collateralAmount: 3.2,
-    collateralToken: "ETH",
-    apy: 8.5,
-    ltv: 65,
-    duration: "30d",
-    expiresIn: "4h",
-    fundedPercentage: 66,
-    onFundClick: () => console.log("Fund loan 1"),
-  },
-  {
-    id: "2",
-    borrowerAddress: "0x9b...1f09",
-    isVerified: false,
-    timeAgo: "4h ago",
-    riskLevel: "Medium",
-    borrowAmount: 25000,
-    borrowToken: "USDC",
-    collateralAmount: 0.85,
-    collateralToken: "WBTC",
-    apy: 12.2,
-    ltv: 75,
-    duration: "90d",
-    expiresIn: "22h",
-    fundedPercentage: 25,
-    onFundClick: () => console.log("Fund loan 2"),
-  },
-  {
-    id: "3",
-    borrowerAddress: "0x2c...4a11",
-    isVerified: false,
-    timeAgo: "15m ago",
-    riskLevel: "Low",
-    borrowAmount: 1200,
-    borrowToken: "DAI",
-    collateralAmount: 0.8,
-    collateralToken: "ETH",
-    apy: 6.5,
-    ltv: 45,
-    duration: "14d",
-    expiresIn: "1h",
-    fundedPercentage: 100,
-    onFundClick: () => console.log("Fund loan 3"),
-  },
-  {
-    id: "4",
-    borrowerAddress: "0x8f...22b1",
-    isVerified: false,
-    timeAgo: "1d ago",
-    riskLevel: "High",
-    borrowAmount: 50000,
-    borrowToken: "USDC",
-    collateralAmount: 20000,
-    collateralToken: "UNI",
-    apy: 24.5,
-    ltv: 85,
-    duration: "180d",
-    expiresIn: "48h",
-    fundedPercentage: 20,
-    onFundClick: () => console.log("Fund loan 4"),
-  },
-  {
-    id: "5",
-    borrowerAddress: "0x1a...55c2",
-    isVerified: false,
-    timeAgo: "5h ago",
-    riskLevel: "Medium",
-    borrowAmount: 8500,
-    borrowToken: "USDC",
-    collateralAmount: 5.5,
-    collateralToken: "ETH",
-    apy: 9.1,
-    ltv: 70,
-    duration: "60d",
-    expiresIn: "12h",
-    fundedPercentage: 50,
-    onFundClick: () => console.log("Fund loan 5"),
-  },
-  {
-    id: "6",
-    borrowerAddress: "0x33...bb99",
-    isVerified: false,
-    timeAgo: "Just now",
-    riskLevel: "Low",
-    borrowAmount: 100000,
-    borrowToken: "USDT",
-    collateralAmount: 120000,
-    collateralToken: "USDC",
-    apy: 4.2,
-    ltv: 83,
-    duration: "30d",
-    expiresIn: "23h",
-    fundedPercentage: 100,
-    onFundClick: () => console.log("Fund loan 6"),
-  },
-];
+import { useLoanMarketplaceCards } from "@/common/hooks/api/query/useLoanMarketplaceData";
 
 export const MarketplacePage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -137,13 +33,59 @@ export const MarketplacePage = () => {
     durations: ["medium"],
   });
 
+  // Fetch loan marketplace cards from contract
+  const { data: loansData = [], isLoading, error } = useLoanMarketplaceCards();
+
+  // Helper function to convert duration string to days for comparison
+  const getDurationDays = (durationStr: string): number => {
+    const num = parseInt(durationStr);
+    if (durationStr.includes("d")) return num;
+    if (durationStr.includes("h")) return num / 24;
+    if (durationStr.includes("m")) return num / 1440;
+    return num;
+  };
+
+  // Helper function to categorize duration
+  const getDurationCategory = (durationStr: string): string => {
+    const days = getDurationDays(durationStr);
+    if (days <= 14) return "short";
+    if (days <= 60) return "medium";
+    return "long";
+  };
+
+  // Filter loans based on current filters
+  const filteredLoans = useMemo(() => {
+    return loansData.filter((loan) => {
+      // Filter by collateral
+      if (!filters.collaterals.includes("All") && !filters.collaterals.includes(loan.collateralToken)) {
+        return false;
+      }
+
+      // Filter by LTV
+      if (loan.ltv > filters.maxLTV) {
+        return false;
+      }
+
+      // Filter by interest rate (APY)
+      if (loan.apy < filters.interestRateMin || loan.apy > filters.interestRateMax) {
+        return false;
+      }
+
+      // Filter by duration
+      const durationCategory = getDurationCategory(loan.duration);
+      if (!filters.durations.includes(durationCategory)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [filters, loansData]);
+
+  // Calculate pagination with filtered data
   const itemsPerPage = 6;
-  const totalPages = Math.ceil(mockLoans.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredLoans.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedLoans = mockLoans.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  const paginatedLoans = filteredLoans.slice(startIndex, startIndex + itemsPerPage);
 
   const handleResetFilters = () => {
     setFilters({
@@ -172,13 +114,13 @@ export const MarketplacePage = () => {
         <Box
           sx={{
             padding: {
-              sm: '0 24px',
-              md: '0 48px',
-              lg: '0 64px',
-              xl: '0 96px',
+              sm: "0 24px",
+              md: "0 48px",
+              lg: "0 64px",
+              xl: "0 96px",
             },
-            maxWidth: '1920px',
-            mx: 'auto',
+            maxWidth: "1920px",
+            mx: "auto",
           }}
         >
           {/* Header Section */}
@@ -230,7 +172,7 @@ export const MarketplacePage = () => {
             }}
           >
             {[
-              { label: "Active Loans", value: "1,248" },
+              { label: "Active Loans", value: loansData.length.toString() },
               { label: "TVL", value: "$42.5M" },
               { label: "Avg. APY", value: "12.4%" },
             ].map((stat) => (
@@ -287,64 +229,117 @@ export const MarketplacePage = () => {
             <Grid size={{ xs: 12, lg: 9 }}>
               {/* Toolbar */}
               <MarketplaceToolbar
-                totalLoans={mockLoans.length}
+                totalLoans={filteredLoans.length}
                 sortBy={sortBy}
                 viewMode={viewMode}
                 onSortChange={setSortBy}
                 onViewModeChange={setViewMode}
               />
 
-              {/* Loans Grid */}
-              <Grid
-                container
-                spacing={2}
-                sx={{ mb: 4 }}
-              >
-                {paginatedLoans.map((loan) => (
-                  <Grid
-                    key={loan.id}
-                    size={{
-                      xs: 12,
-                      sm: viewMode === "grid" ? 6 : 12,
-                      md: viewMode === "grid" ? 4 : 12,
-                      lg: viewMode === "grid" ? 4 : 12,
-                    }}
-                  >
-                    <LoanCard {...loan} />
-                  </Grid>
-                ))}
-              </Grid>
+              {/* Loading State */}
+              {isLoading && (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+                  <CircularProgress sx={{ color: "#2b8cee" }} />
+                </Box>
+              )}
 
-              {/* Pagination */}
-              <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-                <Pagination
-                  count={totalPages}
-                  page={currentPage}
-                  onChange={(_, page) => setCurrentPage(page)}
-                  sx={{
-                    "& .MuiPaginationItem-root": {
-                      color: "#9dabb9",
-                      border: "1px solid #283039",
-                      backgroundColor: "#1c232d",
-                      "&:hover": {
-                        backgroundColor: "#283039",
-                        color: "white",
-                      },
-                      "&.Mui-selected": {
-                        backgroundColor: "#2b8cee",
-                        color: "white",
-                        border: "1px solid #2b8cee",
-                      },
-                    },
-                  }}
-                />
-              </Box>
+              {/* Error State */}
+              {error && !isLoading && (
+                <Box sx={{ mb: 4, p: 3, backgroundColor: "#1c232d", borderRadius: "0.75rem" }}>
+                  <Typography sx={{ color: "#ff6b6b" }}>
+                    Error loading loan requests. Please try again later.
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Loans Grid */}
+              {!isLoading && !error && (
+                <>
+                  {filteredLoans.length === 0 ? (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        py: 12,
+                        textAlign: "center",
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          color: "#9dabb9",
+                          fontSize: "1.125rem",
+                          fontWeight: 500,
+                          mb: 1,
+                        }}
+                      >
+                        No active loan offers currently
+                      </Typography>
+                      <Typography
+                        sx={{
+                          color: "#6b7684",
+                          fontSize: "0.875rem",
+                          fontWeight: 400,
+                        }}
+                      >
+                        Try adjusting your filters or check back later
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <>
+                      <Grid
+                        container
+                        spacing={2}
+                        sx={{ mb: 4 }}
+                      >
+                        {paginatedLoans.map((loan) => (
+                          <Grid
+                            key={loan.id}
+                            size={{
+                              xs: 12,
+                              sm: viewMode === "grid" ? 6 : 12,
+                              md: viewMode === "grid" ? 4 : 12,
+                              lg: viewMode === "grid" ? 4 : 12,
+                            }}
+                          >
+                            <LoanCard {...loan} />
+                          </Grid>
+                        ))}
+                      </Grid>
+
+                      {/* Pagination */}
+                      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+                        <Pagination
+                          count={totalPages}
+                          page={currentPage}
+                          onChange={(_, page) => setCurrentPage(page)}
+                          sx={{
+                            "& .MuiPaginationItem-root": {
+                              color: "#9dabb9",
+                              border: "1px solid #283039",
+                              backgroundColor: "#1c232d",
+                              "&:hover": {
+                                backgroundColor: "#283039",
+                                color: "white",
+                              },
+                              "&.Mui-selected": {
+                                backgroundColor: "#2b8cee",
+                                color: "white",
+                                border: "1px solid #2b8cee",
+                              },
+                            },
+                          }}
+                        />
+                      </Box>
+                    </>
+                  )}
+                </>
+              )}
             </Grid>
           </Grid>
         </Box>
-        </Box>
       </Box>
-      // </Box>
-    // </Box>
+    </Box>
   );
 };

@@ -16,6 +16,8 @@ import {
   Divider,
   FormControl,
   InputAdornment,
+  Alert,
+  CircularProgress,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -27,21 +29,104 @@ import {
 } from "@mui/icons-material";
 import { LandingNavbar } from "@/ui/modules/components";
 import { useRouter } from "next/navigation";
+import { useAccount } from "wagmi";
+import { useConfigurationParams, useCreateLenderOffer } from "@/common/hooks/api";
+import { validateInterestRate, validateLoanDuration, validatePositiveAmount } from "@/common/utils/validation";
 
 export const LenderOfferPage: React.FC = () => {
   const router = useRouter();
+  const { isConnected } = useAccount();
+  const { data: configParams, isLoading: isLoadingConfig } = useConfigurationParams(isConnected);
+  const { mutate: createOffer, isPending: isCreating } = useCreateLenderOffer();
+
   const [asset, setAsset] = useState("USDC");
   const [amount, setAmount] = useState("1000.00");
   const [duration, setDuration] = useState("30");
   const [apy, setApy] = useState(12.5);
   const [collateral, setCollateral] = useState("any");
   const [ltv, setLtv] = useState(150);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const calculateProjectedEarnings = () => {
     const principal = parseFloat(amount) || 0;
     const daysMap: { [key: string]: number } = { "7": 7, "30": 30, "90": 90 };
     const days = daysMap[duration] || 30;
     return (principal * (apy / 100) * (days / 365)).toFixed(2);
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    const amountValidation = validatePositiveAmount(
+      BigInt(parseInt(amount) || 0),
+      "Amount"
+    );
+    if (!amountValidation.valid) {
+      newErrors.amount = amountValidation.error || "Invalid amount";
+    }
+
+    if (configParams) {
+      const rateValidation = validateInterestRate(
+        BigInt(Math.floor(apy * 100)),
+        configParams.maxInterestRate
+      );
+      if (!rateValidation.valid) {
+        newErrors.apy = rateValidation.error || "Invalid rate";
+      }
+
+      const durationValidation = validateLoanDuration(
+        BigInt(parseInt(duration) || 0),
+        configParams.minLoanDuration,
+        configParams.maxLoanDuration
+      );
+      if (!durationValidation.valid) {
+        newErrors.duration = durationValidation.error || "Invalid duration";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handlePublishOffer = async () => {
+    setSubmitError(null);
+
+    if (!validateForm()) {
+      return;
+    }
+
+    if (!isConnected) {
+      setSubmitError("Please connect your wallet first");
+      return;
+    }
+
+    // Parse asset address - in real implementation this would be token address
+    const lendAssetAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
+    const collateralAssetAddress = "0x0000000000000000000000000000000000000001" as `0x${string}`;
+
+    createOffer(
+      {
+        lendAsset: lendAssetAddress,
+        lendAmount: BigInt(parseInt(amount) * 10 ** 18),
+        requiredCollateralAsset: collateralAssetAddress,
+        minCollateralAmount: BigInt(parseInt(amount) * 10 ** 18),
+        interestRate: BigInt(Math.floor(apy * 100)),
+        duration: BigInt(parseInt(duration)),
+      },
+      {
+        onSuccess: () => {
+          setSuccess(true);
+          setTimeout(() => {
+            router.push("/lender-dashboard");
+          }, 2000);
+        },
+        onError: (error) => {
+          setSubmitError(`Failed to create offer: ${error.message}`);
+        },
+      }
+    );
   };
 
   const projectedEarnings = calculateProjectedEarnings();
@@ -72,6 +157,23 @@ export const LenderOfferPage: React.FC = () => {
           px: { xs: 1, lg: 2 },
         }}
       >
+        {!isConnected && (
+          <Alert severity="warning" sx={{ position: "fixed", top: 100, left: 20, right: 20, zIndex: 100 }}>
+            Please connect your wallet to create an offer
+          </Alert>
+        )}
+
+        {submitError && (
+          <Alert severity="error" sx={{ position: "fixed", top: 100, left: 20, right: 20, zIndex: 100 }}>
+            {submitError}
+          </Alert>
+        )}
+
+        {success && (
+          <Alert severity="success" sx={{ position: "fixed", top: 100, left: 20, right: 20, zIndex: 100 }}>
+            Offer created successfully! Redirecting...
+          </Alert>
+        )}
         <Box 
           sx={{ 
             maxWidth: '1920px', 
@@ -224,9 +326,14 @@ export const LenderOfferPage: React.FC = () => {
                     />
                     <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
                       <Typography sx={{ color: "#9dabb9", fontSize: "0.75rem" }}>
-                        Available: 1,204.55 USDC
+                        Max Rate: {configParams ? configParams.maxInterestRate.toString() + "%" : "Loading..."}
                       </Typography>
                     </Box>
+                    {errors.apy && (
+                      <Typography sx={{ color: "#ef4444", fontSize: "0.75rem" }}>
+                        {errors.apy}
+                      </Typography>
+                    )}
                   </Box>
                 </Box>
               </Card>
@@ -305,6 +412,11 @@ export const LenderOfferPage: React.FC = () => {
                       />
                     ))}
                   </RadioGroup>
+                  {errors.duration && (
+                    <Typography sx={{ color: "#ef4444", fontSize: "0.75rem", mt: 1 }}>
+                      {errors.duration}
+                    </Typography>
+                  )}
                 </Box>
 
                 {/* APY Slider */}
@@ -360,6 +472,11 @@ export const LenderOfferPage: React.FC = () => {
                       <span>50%</span>
                     </Box>
                   </Box>
+                  {errors.apy && (
+                    <Typography sx={{ color: "#ef4444", fontSize: "0.75rem", mt: 1 }}>
+                      {errors.apy}
+                    </Typography>
+                  )}
                 </Box>
               </Card>
 

@@ -5,8 +5,11 @@ import {
   Button,
   Grid,
   Typography,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import { useState } from "react";
+import { useAccount } from "wagmi";
 import {
   FiatOfferCard,
   FiatOfferCardProps,
@@ -18,6 +21,7 @@ import {
 import { FiatOffersToolbar } from "../../modules/components/FiatOffersToolbar";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { LandingNavbar } from "@/ui/modules/components";
+import { useActiveFiatLenderOffers, useFiatLenderOfferDetails, useSupplierDetails } from "@/common/hooks/api";
 
 // Mock offers data
 const mockOffers: FiatOfferCardProps[] = [
@@ -116,6 +120,7 @@ const mockOffers: FiatOfferCardProps[] = [
 ];
 
 export const BorrowerFiatOffersPage = () => {
+  const { isConnected } = useAccount();
   const [sortBy, setSortBy] = useState("lowest-apr");
   const [filters, setFilters] = useState<FiatFiltersState>({
     fiatCurrency: "USD",
@@ -125,6 +130,8 @@ export const BorrowerFiatOffersPage = () => {
     durations: ["medium"],
     collaterals: ["All"],
   });
+
+  const { data: offerIds, isLoading: isLoadingOffers } = useActiveFiatLenderOffers(isConnected);
 
   const handleResetFilters = () => {
     setFilters({
@@ -136,6 +143,17 @@ export const BorrowerFiatOffersPage = () => {
       collaterals: ["All"],
     });
   };
+
+  if (!isConnected) {
+    return (
+      <Box sx={{ minHeight: "100vh" }}>
+        <LandingNavbar />
+        <Box sx={{ p: 4, textAlign: "center" }}>
+          <Alert severity="warning">Please connect your wallet to view fiat offers</Alert>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -225,11 +243,21 @@ export const BorrowerFiatOffersPage = () => {
 
             {/* Offers Grid */}
             <Grid container spacing={2}>
-              {mockOffers.map((offer) => (
-                <Grid key={offer.id} size={{ xs: 12, sm: 6, md: 6, lg: 4 }}>
-                  <FiatOfferCard {...offer} />
-                </Grid>
-              ))}
+              {isLoadingOffers ? (
+                <Box sx={{ width: "100%", textAlign: "center", py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (offerIds && offerIds.length > 0) ? (
+                offerIds.slice(0, 10).map((offerId) => (
+                  <Grid key={offerId} size={{ xs: 12, sm: 6, md: 6, lg: 4 }}>
+                    <FiatOfferCardWrapper offerId={offerId} />
+                  </Grid>
+                ))
+              ) : (
+                <Alert severity="info" sx={{ width: "100%" }}>
+                  No fiat loan offers available at the moment.
+                </Alert>
+              )}
             </Grid>
 
             {/* Load More Button */}
