@@ -11,113 +11,13 @@ import {
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import {
-  FiatOfferCard,
-  FiatOfferCardProps,
-} from "../../modules/components/FiatOfferCard";
-import {
   FiatFiltersSection,
   FiatFiltersState,
 } from "../../modules/components/FiatFiltersSection";
 import { FiatOffersToolbar } from "../../modules/components/FiatOffersToolbar";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { LandingNavbar } from "@/ui/modules/components";
-import { useActiveFiatLenderOffers, useFiatLenderOfferDetails, useSupplierDetails } from "@/common/hooks/api";
-
-// Mock offers data
-const mockOffers: FiatOfferCardProps[] = [
-  {
-    id: "1",
-    loanAmount: 25000,
-    currency: "USD",
-    currencySymbol: "$",
-    apr: 5.5,
-    duration: "12 Months",
-    collateralRequired: 14.2,
-    collateralToken: "ETH",
-    ltv: 65,
-    supplierName: "NexusCapital",
-    isVerified: true,
-    trustScore: 98,
-    badge: { label: "Low APR", icon: "trending_down", color: "green" },
-    onAcceptClick: () => console.log("Accept offer 1"),
-  },
-  {
-    id: "2",
-    loanAmount: 10000,
-    currency: "EUR",
-    currencySymbol: "€",
-    apr: 4.2,
-    duration: "6 Months",
-    collateralRequired: 0.25,
-    collateralToken: "WBTC",
-    ltv: 60,
-    supplierName: "EuroLend Pro",
-    isVerified: true,
-    trustScore: 95,
-    onAcceptClick: () => console.log("Accept offer 2"),
-  },
-  {
-    id: "3",
-    loanAmount: 50000,
-    currency: "USD",
-    currencySymbol: "$",
-    apr: 6.0,
-    duration: "24 Months",
-    collateralRequired: 32.5,
-    collateralToken: "ETH",
-    ltv: 70,
-    supplierName: "Apex Liquidity",
-    isVerified: true,
-    trustScore: 99,
-    badge: { label: "Featured", icon: "star", color: "purple" },
-    onAcceptClick: () => console.log("Accept offer 3"),
-  },
-  {
-    id: "4",
-    loanAmount: 2500,
-    currency: "USD",
-    currencySymbol: "$",
-    apr: 8.5,
-    duration: "3 Months",
-    collateralRequired: 5000,
-    collateralToken: "USDC",
-    ltv: 50,
-    supplierName: "QuickFund DAO",
-    isVerified: false,
-    trustScore: 82,
-    onAcceptClick: () => console.log("Accept offer 4"),
-  },
-  {
-    id: "5",
-    loanAmount: 15000,
-    currency: "USD",
-    currencySymbol: "$",
-    apr: 5.8,
-    duration: "9 Months",
-    collateralRequired: 0.38,
-    collateralToken: "WBTC",
-    ltv: 62,
-    supplierName: "CryptoVault Ltd",
-    isVerified: true,
-    trustScore: 94,
-    onAcceptClick: () => console.log("Accept offer 5"),
-  },
-  {
-    id: "6",
-    loanAmount: 5000,
-    currency: "GBP",
-    currencySymbol: "£",
-    apr: 3.9,
-    duration: "12 Months",
-    collateralRequired: 3.8,
-    collateralToken: "ETH",
-    ltv: 55,
-    supplierName: "London Capital",
-    isVerified: true,
-    trustScore: 97,
-    onAcceptClick: () => console.log("Accept offer 6"),
-  },
-];
+import { useActiveFiatLenderOffers } from "@/common/hooks/api";
 
 export const BorrowerFiatOffersPage = () => {
   const { isConnected } = useAccount();
@@ -250,7 +150,7 @@ export const BorrowerFiatOffersPage = () => {
               ) : (offerIds && offerIds.length > 0) ? (
                 offerIds.slice(0, 10).map((offerId) => (
                   <Grid key={offerId} size={{ xs: 12, sm: 6, md: 6, lg: 4 }}>
-                    <FiatOfferCardWrapper offerId={offerId} />
+                    {/* <FiatOfferCardWrapper offerId={offerId} /> */}
                   </Grid>
                 ))
               ) : (

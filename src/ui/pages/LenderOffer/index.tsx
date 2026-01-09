@@ -17,7 +17,7 @@ import {
   FormControl,
   InputAdornment,
   Alert,
-  CircularProgress,
+  CircularProgress as MuiCircularProgress,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -31,6 +31,7 @@ import { LandingNavbar } from "@/ui/modules/components";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { useConfigurationParams, useCreateLenderOffer } from "@/common/hooks/api";
+import { TOKEN_ASSETS, TokenSymbol } from "@/common/constants";
 import { validateInterestRate, validateLoanDuration, validatePositiveAmount } from "@/common/utils/validation";
 
 export const LenderOfferPage: React.FC = () => {
@@ -39,15 +40,18 @@ export const LenderOfferPage: React.FC = () => {
   const { data: configParams, isLoading: isLoadingConfig } = useConfigurationParams(isConnected);
   const { mutate: createOffer, isPending: isCreating } = useCreateLenderOffer();
 
-  const [asset, setAsset] = useState("USDC");
-  const [amount, setAmount] = useState("1000.00");
+  const [lendTokenSymbol, setLendTokenSymbol] = useState<TokenSymbol>("USDC");
+  const [collateralTokenSymbol, setCollateralTokenSymbol] = useState<TokenSymbol>("WETH");
+  const [amount, setAmount] = useState("1000");
+  const [collateralAmount, setCollateralAmount] = useState("1");
   const [duration, setDuration] = useState("30");
   const [apy, setApy] = useState(12.5);
-  const [collateral, setCollateral] = useState("any");
-  const [ltv, setLtv] = useState(150);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const lendToken = TOKEN_ASSETS[lendTokenSymbol];
+  const collateralToken = TOKEN_ASSETS[collateralTokenSymbol];
 
   const calculateProjectedEarnings = () => {
     const principal = parseFloat(amount) || 0;
@@ -61,10 +65,18 @@ export const LenderOfferPage: React.FC = () => {
 
     const amountValidation = validatePositiveAmount(
       BigInt(parseInt(amount) || 0),
-      "Amount"
+      "Lending Amount"
     );
     if (!amountValidation.valid) {
-      newErrors.amount = amountValidation.error || "Invalid amount";
+      newErrors["amount"] = amountValidation.error || "Invalid amount";
+    }
+
+    const collateralValidation = validatePositiveAmount(
+      BigInt(parseInt(collateralAmount) || 0),
+      "Collateral Amount"
+    );
+    if (!collateralValidation.valid) {
+      newErrors["collateralAmount"] = collateralValidation.error || "Invalid collateral amount";
     }
 
     if (configParams) {
@@ -73,7 +85,7 @@ export const LenderOfferPage: React.FC = () => {
         configParams.maxInterestRate
       );
       if (!rateValidation.valid) {
-        newErrors.apy = rateValidation.error || "Invalid rate";
+        newErrors["apy"] = rateValidation.error || "Invalid rate";
       }
 
       const durationValidation = validateLoanDuration(
@@ -82,7 +94,7 @@ export const LenderOfferPage: React.FC = () => {
         configParams.maxLoanDuration
       );
       if (!durationValidation.valid) {
-        newErrors.duration = durationValidation.error || "Invalid duration";
+        newErrors["duration"] = durationValidation.error || "Invalid duration";
       }
     }
 
@@ -102,18 +114,20 @@ export const LenderOfferPage: React.FC = () => {
       return;
     }
 
-    // Parse asset address - in real implementation this would be token address
-    const lendAssetAddress = "0x0000000000000000000000000000000000000000" as `0x${string}`;
-    const collateralAssetAddress = "0x0000000000000000000000000000000000000001" as `0x${string}`;
+    // Calculate amounts with proper decimals
+    const lendAmount = BigInt(parseInt(amount)) * BigInt(10 ** lendToken.decimals);
+    const minCollateralAmount = BigInt(parseInt(collateralAmount)) * BigInt(10 ** collateralToken.decimals);
+    const interestRate = BigInt(Math.floor(apy * 100)); // Store as basis points (e.g., 1250 = 12.5%)
+    const durationDays = BigInt(parseInt(duration));
 
     createOffer(
       {
-        lendAsset: lendAssetAddress,
-        lendAmount: BigInt(parseInt(amount) * 10 ** 18),
-        requiredCollateralAsset: collateralAssetAddress,
-        minCollateralAmount: BigInt(parseInt(amount) * 10 ** 18),
-        interestRate: BigInt(Math.floor(apy * 100)),
-        duration: BigInt(parseInt(duration)),
+        lendAsset: lendToken.address as `0x${string}`,
+        lendAmount,
+        requiredCollateralAsset: collateralToken.address as `0x${string}`,
+        minCollateralAmount,
+        interestRate,
+        duration: durationDays,
       },
       {
         onSuccess: () => {
@@ -123,7 +137,7 @@ export const LenderOfferPage: React.FC = () => {
           }, 2000);
         },
         onError: (error) => {
-          setSubmitError(`Failed to create offer: ${error.message}`);
+          setSubmitError(`Failed to create offer: ${error instanceof Error ? error.message : "Unknown error"}`);
         },
       }
     );
@@ -131,6 +145,10 @@ export const LenderOfferPage: React.FC = () => {
 
   const projectedEarnings = calculateProjectedEarnings();
   const totalReturn = (parseFloat(amount) + parseFloat(projectedEarnings)).toFixed(2);
+
+  const maxInterestRateDisplay = configParams
+    ? (Number(configParams.maxInterestRate) / 100).toFixed(2)
+    : "Loading...";
 
   return (
     <Box
@@ -246,15 +264,15 @@ export const LenderOfferPage: React.FC = () => {
                 </Box>
 
                 <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 2 }}>
-                  {/* Asset Select */}
+                  {/* Lend Asset Select */}
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
                     <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
                       I want to lend
                     </Typography>
                     <FormControl variant="outlined" size="small">
                       <Select
-                        value={asset}
-                        onChange={(e) => setAsset(e.target.value)}
+                        value={lendTokenSymbol}
+                        onChange={(e) => setLendTokenSymbol(e.target.value as TokenSymbol)}
                         sx={{
                           color: "#fff",
                           borderRadius: "8px",
@@ -269,9 +287,11 @@ export const LenderOfferPage: React.FC = () => {
                           "&.Mui-focused": { boxShadow: "0 0 0 3px rgba(43,140,238,0.1)" },
                         }}
                       >
-                        <MenuItem value="USDC">USDC (USD Coin)</MenuItem>
-                        <MenuItem value="DAI">DAI (Dai Stablecoin)</MenuItem>
-                        <MenuItem value="WETH">WETH (Wrapped Ether)</MenuItem>
+                        {Object.entries(TOKEN_ASSETS).map(([symbol, asset]) => (
+                          <MenuItem key={symbol} value={symbol}>
+                            {asset.symbol} ({asset.name})
+                          </MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                   </Box>
@@ -287,25 +307,14 @@ export const LenderOfferPage: React.FC = () => {
                       type="number"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      placeholder="0.00"
+                      placeholder="0"
+                      error={!!errors["amount"]}
+                      helperText={errors["amount"]}
                       InputProps={{
                         endAdornment: (
-                          <Button
-                            sx={{
-                              ml: 1,
-                              px: 1.5,
-                              height: 40,
-                              fontSize: "0.75rem",
-                              fontWeight: "bold",
-                              color: "#2b8cee",
-                              backgroundColor: "rgba(43,140,238,0.1)",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.05em",
-                              "&:hover": { backgroundColor: "rgba(43,140,238,0.2)" },
-                            }}
-                          >
-                            Max
-                          </Button>
+                          <InputAdornment position="end">
+                            {lendToken.symbol}
+                          </InputAdornment>
                         ),
                       }}
                       sx={{
@@ -322,18 +331,9 @@ export const LenderOfferPage: React.FC = () => {
                           "&.Mui-focused fieldset": { borderColor: "#2b8cee", borderWidth: 1 },
                         },
                         "& input::placeholder": { color: "#9dabb9" },
+                        "& .MuiFormHelperText-root": { color: "#ef4444" },
                       }}
                     />
-                    <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                      <Typography sx={{ color: "#9dabb9", fontSize: "0.75rem" }}>
-                        Max Rate: {configParams ? configParams.maxInterestRate.toString() + "%" : "Loading..."}
-                      </Typography>
-                    </Box>
-                    {errors.apy && (
-                      <Typography sx={{ color: "#ef4444", fontSize: "0.75rem" }}>
-                        {errors.apy}
-                      </Typography>
-                    )}
                   </Box>
                 </Box>
               </Card>
@@ -377,7 +377,7 @@ export const LenderOfferPage: React.FC = () => {
                       { value: "7", label: "7 Days" },
                       { value: "30", label: "30 Days" },
                       { value: "90", label: "90 Days" },
-                      { value: "custom", label: "Custom" },
+                      { value: "365", label: "1 Year" },
                     ].map((option) => (
                       <FormControlLabel
                         key={option.value}
@@ -412,9 +412,9 @@ export const LenderOfferPage: React.FC = () => {
                       />
                     ))}
                   </RadioGroup>
-                  {errors.duration && (
+                  {errors["duration"] && (
                     <Typography sx={{ color: "#ef4444", fontSize: "0.75rem", mt: 1 }}>
-                      {errors.duration}
+                      {errors["duration"]}
                     </Typography>
                   )}
                 </Box>
@@ -429,6 +429,7 @@ export const LenderOfferPage: React.FC = () => {
                       type="number"
                       value={apy}
                       onChange={(e) => setApy(parseFloat(e.target.value))}
+                      error={!!errors["apy"]}
                       InputProps={{ startAdornment: <InputAdornment position="start">%</InputAdornment> }}
                       sx={{
                         width: 128,
@@ -452,8 +453,8 @@ export const LenderOfferPage: React.FC = () => {
                     <Slider
                       value={apy}
                       onChange={(_, newValue) => setApy(newValue as number)}
-                      min={1}
-                      max={50}
+                      min={0.5}
+                      max={parseFloat(maxInterestRateDisplay) || 50}
                       step={0.5}
                       sx={{
                         color: "#2b8cee",
@@ -467,14 +468,14 @@ export const LenderOfferPage: React.FC = () => {
                       }}
                     />
                     <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1, fontSize: "0.75rem", color: "#9dabb9", fontWeight: 500 }}>
-                      <span>1%</span>
-                      <span>25%</span>
-                      <span>50%</span>
+                      <span>0.5%</span>
+                      <span>{(parseFloat(maxInterestRateDisplay) / 2).toFixed(1)}%</span>
+                      <span>{maxInterestRateDisplay}%</span>
                     </Box>
                   </Box>
-                  {errors.apy && (
+                  {errors["apy"] && (
                     <Typography sx={{ color: "#ef4444", fontSize: "0.75rem", mt: 1 }}>
-                      {errors.apy}
+                      {errors["apy"]}
                     </Typography>
                   )}
                 </Box>
@@ -501,15 +502,15 @@ export const LenderOfferPage: React.FC = () => {
                 </Box>
 
                 <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 2 }}>
-                  {/* Collateral Select */}
+                  {/* Collateral Asset Select */}
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
                     <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
                       Accepted Collateral
                     </Typography>
                     <FormControl variant="outlined" size="small">
                       <Select
-                        value={collateral}
-                        onChange={(e) => setCollateral(e.target.value)}
+                        value={collateralTokenSymbol}
+                        onChange={(e) => setCollateralTokenSymbol(e.target.value as TokenSymbol)}
                         sx={{
                           color: "#fff",
                           borderRadius: "8px",
@@ -524,32 +525,37 @@ export const LenderOfferPage: React.FC = () => {
                           "&.Mui-focused": { boxShadow: "0 0 0 3px rgba(43,140,238,0.1)" },
                         }}
                       >
-                        <MenuItem value="any">Any Verified Asset</MenuItem>
-                        <MenuItem value="stable">Stablecoins Only</MenuItem>
-                        <MenuItem value="bluechip">Blue Chip (BTC/ETH)</MenuItem>
+                        {Object.entries(TOKEN_ASSETS).map(([symbol, asset]) => (
+                          <MenuItem key={symbol} value={symbol}>
+                            {asset.symbol} ({asset.name})
+                          </MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                   </Box>
 
-                  {/* LTV Input */}
+                  {/* Collateral Amount Input */}
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 1, flex: 1 }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
-                        Minimum LTV
+                        Minimum Collateral
                       </Typography>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <Typography sx={{ fontSize: "0.75rem", fontWeight: 400, color: "#9dabb9", cursor: "help" }} title="The minimum value of collateral required relative to the loan amount.">
-                        (Loan to Value)
-                      </Typography>
-                      <Info sx={{ fontSize: "1rem", color: "#9dabb9", cursor: "help" }} />
-                    </Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                        <Typography sx={{ fontSize: "0.75rem", fontWeight: 400, color: "#9dabb9", cursor: "help" }} title="The minimum amount of collateral required for this offer.">
+                          (Amount)
+                        </Typography>
+                        <Info sx={{ fontSize: "1rem", color: "#9dabb9", cursor: "help" }} />
+                      </Box>
                     </Box>
                     <TextField
                       type="number"
-                      value={ltv}
-                      onChange={(e) => setLtv(parseInt(e.target.value))}
+                      value={collateralAmount}
+                      onChange={(e) => setCollateralAmount(e.target.value)}
+                      placeholder="0"
+                      error={!!errors["collateralAmount"]}
+                      helperText={errors["collateralAmount"]}
                       InputProps={{
-                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                        endAdornment: <InputAdornment position="end">{collateralToken.symbol}</InputAdornment>,
                       }}
                       sx={{
                         "& .MuiOutlinedInput-root": {
@@ -565,6 +571,7 @@ export const LenderOfferPage: React.FC = () => {
                           "&.Mui-focused fieldset": { borderColor: "#2b8cee", borderWidth: 1 },
                         },
                         "& input::placeholder": { color: "#9dabb9" },
+                        "& .MuiFormHelperText-root": { color: "#ef4444" },
                       }}
                     />
                   </Box>
@@ -607,12 +614,20 @@ export const LenderOfferPage: React.FC = () => {
                 <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <Typography sx={{ color: "#9dabb9", fontSize: "0.875rem" }}>Principal Amount</Typography>
-                    <Typography sx={{ color: "#fff", fontWeight: 500 }}>{amount} {asset}</Typography>
+                    <Typography sx={{ color: "#fff", fontWeight: 500 }}>
+                      {amount} {lendToken.symbol}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography sx={{ color: "#9dabb9", fontSize: "0.875rem" }}>Required Collateral</Typography>
+                    <Typography sx={{ color: "#fff", fontWeight: 500 }}>
+                      {collateralAmount} {collateralToken.symbol}
+                    </Typography>
                   </Box>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <Typography sx={{ color: "#9dabb9", fontSize: "0.875rem" }}>Duration</Typography>
                     <Typography sx={{ color: "#fff", fontWeight: 500 }}>
-                      {duration === "custom" ? "Custom" : duration + " Days"}
+                      {duration} Days
                     </Typography>
                   </Box>
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -624,7 +639,9 @@ export const LenderOfferPage: React.FC = () => {
 
                   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <Typography sx={{ color: "#9dabb9", fontSize: "0.875rem" }}>Projected Earnings</Typography>
-                    <Typography sx={{ color: "#10b981", fontWeight: "bold" }}>+{projectedEarnings} {asset}</Typography>
+                    <Typography sx={{ color: "#10b981", fontWeight: "bold" }}>
+                      +{projectedEarnings} {lendToken.symbol}
+                    </Typography>
                   </Box>
 
                   <Box
@@ -643,7 +660,7 @@ export const LenderOfferPage: React.FC = () => {
                       Total Return
                     </Typography>
                     <Typography sx={{ color: "#fff", fontWeight: "bold", fontSize: "1.125rem" }}>
-                      {totalReturn} {asset}
+                      {totalReturn} {lendToken.symbol}
                     </Typography>
                   </Box>
                 </Box>
@@ -652,6 +669,8 @@ export const LenderOfferPage: React.FC = () => {
                 <Box sx={{ p: 1.5, pt: 0, display: "flex", flexDirection: "column", gap: 1 }}>
                   <Button
                     fullWidth
+                    disabled={isCreating || isLoadingConfig}
+                    onClick={handlePublishOffer}
                     sx={{
                       height: 48,
                       borderRadius: "8px",
@@ -662,12 +681,14 @@ export const LenderOfferPage: React.FC = () => {
                       textTransform: "none",
                       boxShadow: "0 0 20px rgba(43,140,238,0.3)",
                       "&:hover": { opacity: 0.9 },
+                      "&:disabled": { opacity: 0.6, cursor: "not-allowed" },
                     }}
                   >
-                    Publish Offer
+                    {isCreating ? <MuiCircularProgress size={24} sx={{ color: "#fff" }} /> : "Publish Offer"}
                   </Button>
                   <Button
                     fullWidth
+                    onClick={() => router.back()}
                     sx={{
                       height: 48,
                       borderRadius: "8px",
@@ -691,7 +712,7 @@ export const LenderOfferPage: React.FC = () => {
                   <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 0.5, mt: 1 }}>
                     <LocalGasStation sx={{ fontSize: "0.75rem", color: "#9dabb9" }} />
                     <Typography sx={{ color: "#9dabb9", fontSize: "0.75rem" }}>
-                      Est. Network Fee: <span style={{ color: "#fff" }}>$0.45</span>
+                      Est. Network Fee: <span style={{ color: "#fff" }}>Calculated on submission</span>
                     </Typography>
                   </Box>
                 </Box>

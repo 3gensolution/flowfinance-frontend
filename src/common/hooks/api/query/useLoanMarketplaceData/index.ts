@@ -320,4 +320,56 @@ export const useLoanMarketplaceCards = (enabled = true) => {
     enabled: enabled && !!publicClient,
     refetchInterval: 15000, // Refetch every 15 seconds
   });
-};;
+};
+
+export const useLenderOffersByUser = (lenderAddress: `0x${string}` | undefined, enabled = true) => {
+  const publicClient = usePublicClient();
+
+  return useQuery({
+    queryKey: ["loanMarketplace", "lenderOffersByUser", lenderAddress],
+    queryFn: async () => {
+      if (!publicClient || !lenderAddress) return [];
+      try {
+        const result = await publicClient.readContract({
+          account: undefined,
+          address: loanMarketPlaceContract.address as `0x${string}`,
+          abi: loanMarketPlaceContract.abi,
+          functionName: "getLenderOffersByLender",
+          args: [lenderAddress],
+        });
+        return result as bigint[];
+      } catch (error) {
+        console.error("Failed to fetch lender offers by user:", error);
+        return [];
+      }
+    },
+    enabled: enabled && !!publicClient && !!lenderAddress,
+    refetchInterval: 15000,
+  });
+};
+
+export const useLenderOfferDetails = (offerId: bigint | undefined, enabled = true) => {
+  const publicClient = usePublicClient();
+
+  return useQuery({
+    queryKey: ["loanMarketplace", "lenderOfferDetails", offerId],
+    queryFn: async () => {
+      if (!publicClient || !offerId) return null;
+      try {
+        const result = await publicClient.readContract({
+          account: undefined,
+          address: loanMarketPlaceContract.address as `0x${string}`,
+          abi: loanMarketPlaceContract.abi,
+          functionName: "getLenderOfferDetails",
+          args: [offerId],
+        });
+        return result;
+      } catch (error) {
+        console.error(`Failed to fetch lender offer ${offerId} details:`, error);
+        return null;
+      }
+    },
+    enabled: enabled && !!publicClient && !!offerId,
+    refetchInterval: 10000,
+  });
+};

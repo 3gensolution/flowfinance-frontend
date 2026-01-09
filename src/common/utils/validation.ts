@@ -20,7 +20,7 @@ export const validateInterestRate = (
       error: `Interest rate cannot exceed ${maxRate.toString()}%`,
     };
   }
-  if (rate <= 0n) {
+  if (rate <= BigInt(0)) {
     return {
       valid: false,
       error: "Interest rate must be greater than 0",
@@ -60,14 +60,14 @@ export const validateCollateralRatio = (
   loanValueUSD: bigint,
   minRatio: bigint
 ): ValidationResult => {
-  if (collateralValueUSD === 0n) {
+  if (collateralValueUSD === BigInt(0)) {
     return {
       valid: false,
       error: "Collateral value must be greater than 0",
     };
   }
 
-  if (loanValueUSD === 0n) {
+  if (loanValueUSD === BigInt(0)) {
     return {
       valid: false,
       error: "Loan value must be greater than 0",
@@ -76,10 +76,10 @@ export const validateCollateralRatio = (
 
   // Calculate ratio: collateralValue / loanValue
   // Example: 2000 / 1000 = 2 (200% ratio means 50% LTV)
-  const ratio = (collateralValueUSD * 100n) / loanValueUSD;
+  const ratio = (collateralValueUSD * BigInt(100)) / loanValueUSD;
 
   if (ratio < minRatio) {
-    const ltv = (100n * loanValueUSD) / collateralValueUSD;
+    const ltv = (BigInt(100) * loanValueUSD) / collateralValueUSD;
     return {
       valid: false,
       error: `Insufficient collateral. Minimum ratio required: ${minRatio.toString()}%, LTV: ${ltv.toString()}%`,
@@ -94,7 +94,7 @@ export const validateCollateralRatio = (
  */
 export const validateHealthFactor = (
   healthFactor: bigint,
-  minHealthFactor: bigint = 15n // 1.5x in basis points
+  minHealthFactor: bigint = BigInt(15) // 1.5x in basis points
 ): ValidationResult => {
   if (healthFactor < minHealthFactor) {
     return {
@@ -112,7 +112,7 @@ export const validatePositiveAmount = (
   amount: bigint,
   fieldName: string = "Amount"
 ): ValidationResult => {
-  if (amount <= 0n) {
+  if (amount <= BigInt(0)) {
     return {
       valid: false,
       error: `${fieldName} must be greater than 0`,
@@ -142,7 +142,7 @@ export const validateAPY = (
   duration: bigint
 ): bigint => {
   // APY = (annualRate * duration / 365)
-  return (annualRate * duration) / 365n;
+  return (annualRate * duration) / BigInt(365);
 };
 
 /**
@@ -154,7 +154,7 @@ export const calculateRepaymentWithInterest = (
   duration: bigint
 ): bigint => {
   // Repayment = Principal + (Principal * Rate * Duration / 365 / 100)
-  const interest = (principal * annualRate * duration) / (365n * 100n);
+  const interest = (principal * annualRate * duration) / (BigInt(365) * BigInt(100));
   return principal + interest;
 };
 
@@ -166,7 +166,7 @@ export const validateSufficientCollateral = (
   loanValueUSD: bigint,
   minCollateralRatio: bigint
 ): ValidationResult => {
-  if (collateralValueUSD === 0n) {
+  if (collateralValueUSD === BigInt(0)) {
     return {
       valid: false,
       error: "Collateral value must be greater than 0",
@@ -175,7 +175,7 @@ export const validateSufficientCollateral = (
 
   // minCollateralRatio is stored as basis points or percentage
   // Example: 150 means 150% = 1.5x
-  const requiredCollateral = (loanValueUSD * minCollateralRatio) / 100n;
+  const requiredCollateral = (loanValueUSD * minCollateralRatio) / BigInt(100);
 
   if (collateralValueUSD < requiredCollateral) {
     return {
@@ -288,11 +288,11 @@ export const validateLoanCreation = (params: {
  * Format number for display with decimals
  */
 export const formatAmount = (amount: bigint, decimals: number = 18): string => {
-  const divisor = 10n ** BigInt(decimals);
+  const divisor = BigInt(10) ** BigInt(decimals);
   const integerPart = amount / divisor;
   const fractionalPart = amount % divisor;
 
-  if (fractionalPart === 0n) {
+  if (fractionalPart === BigInt(0)) {
     return integerPart.toString();
   }
 
@@ -308,5 +308,5 @@ export const parseAmount = (amount: string, decimals: number = 18): bigint => {
   const integerPart = BigInt(parts[0] || "0");
   const fractionalPart = BigInt((parts[1] || "0").padEnd(decimals, "0").slice(0, decimals));
 
-  return integerPart * (10n ** BigInt(decimals)) + fractionalPart;
+  return integerPart * (BigInt(10) ** BigInt(decimals)) + fractionalPart;
 };

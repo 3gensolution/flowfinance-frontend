@@ -9,9 +9,6 @@ import {
 import { useRouter } from "next/navigation";
 import {
   Dashboard,
-  Payments,
-  Handshake,
-  TrendingUp,
   Settings,
   Waves,
 } from "@mui/icons-material";
@@ -30,9 +27,9 @@ export const BorrowerDashboardSidebar: React.FC<BorrowerDashboardSidebarProps> =
 
   const navItems = [
     { label: "Dashboard", icon: Dashboard, href: ROUTES_SPEC.borrowerDashboard },
-    { label: "Borrow", icon: Payments, href: ROUTES_SPEC.marketplace },
-    { label: "Lend", icon: Handshake, href: ROUTES_SPEC.lenderOffer },
-    { label: "Staking", icon: TrendingUp, href: "#" },
+    // { label: "Borrow", icon: Payments, href: ROUTES_SPEC.marketplace },
+    // { label: "Lend", icon: Handshake, href: ROUTES_SPEC.lenderOffer },
+    // { label: "Staking", icon: TrendingUp, href: "#" },
     { label: "Settings", icon: Settings, href: ROUTES_SPEC.settings },
   ];
 

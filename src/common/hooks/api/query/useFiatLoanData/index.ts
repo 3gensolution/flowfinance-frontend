@@ -16,7 +16,7 @@ export const useActiveFiatLoanRequests = (enabled = true) => {
           abi: fiatLoanBridgeContract.abi,
           functionName: "getActiveFiatLoanRequests",
         });
-        return result as number[];
+        return (result as bigint[]).map((id) => Number(id));
       } catch (error) {
         console.error("Failed to fetch active fiat loan requests:", error);
         return [];
@@ -41,7 +41,7 @@ export const useActiveFiatLenderOffers = (enabled = true) => {
           abi: fiatLoanBridgeContract.abi,
           functionName: "getActiveFiatLenderOffers",
         });
-        return result as number[];
+        return (result as bigint[]).map((id) => Number(id));
       } catch (error) {
         console.error("Failed to fetch active fiat lender offers:", error);
         return [];
@@ -119,7 +119,7 @@ export const useBorrowerFiatLoans = (borrowerAddress: `0x${string}` | undefined,
           functionName: "getBorrowerFiatLoans",
           args: [borrowerAddress],
         });
-        return result as number[];
+        return (result as bigint[]).map((id) => Number(id));
       } catch (error) {
         console.error("Failed to fetch borrower fiat loans:", error);
         return [];
@@ -145,7 +145,7 @@ export const useSupplierFiatLoans = (supplierAddress: `0x${string}` | undefined,
           functionName: "getSupplierFiatLoans",
           args: [supplierAddress],
         });
-        return result as number[];
+        return (result as bigint[]).map((id) => Number(id));
       } catch (error) {
         console.error("Failed to fetch supplier fiat loans:", error);
         return [];

@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useContractWrite } from "wagmi";
+import { useWriteContract } from "wagmi";
 import { loanMarketPlaceContract } from "@/common/lib/contract-addresses";
 
 export const useCreateLoanRequest = () => {
   const queryClient = useQueryClient();
+  const { writeContractAsync } = useWriteContract();
 
   return useMutation({
     mutationFn: async (params: {
@@ -14,18 +15,36 @@ export const useCreateLoanRequest = () => {
       interestRate: bigint;
       duration: bigint;
     }) => {
-      // This will be replaced with actual contract write using wagmi
-      console.log("Creating loan request:", params);
-      return { success: true };
+      try {
+        const hash = await writeContractAsync({
+          address: loanMarketPlaceContract.address as `0x${string}`,
+          abi: loanMarketPlaceContract.abi,
+          functionName: "createLoanRequest",
+          args: [
+            params.collateralToken,
+            params.collateralAmount,
+            params.borrowAsset,
+            params.borrowAmount,
+            params.interestRate,
+            params.duration,
+          ],
+        });
+        return { hash, success: true };
+      } catch (error) {
+        console.error("Failed to create loan request:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loanMarketplace", "activeLoanRequests"] });
+      queryClient.invalidateQueries({ queryKey: ["loanMarketplace", "borrowerLoans"] });
     },
   });
 };
 
 export const useCreateLenderOffer = () => {
   const queryClient = useQueryClient();
+  const { writeContractAsync } = useWriteContract();
 
   return useMutation({
     mutationFn: async (params: {
@@ -36,11 +55,29 @@ export const useCreateLenderOffer = () => {
       interestRate: bigint;
       duration: bigint;
     }) => {
-      console.log("Creating lender offer:", params);
-      return { success: true };
+      try {
+        const hash = await writeContractAsync({
+          address: loanMarketPlaceContract.address as `0x${string}`,
+          abi: loanMarketPlaceContract.abi,
+          functionName: "createLenderOffer",
+          args: [
+            params.lendAsset,
+            params.lendAmount,
+            params.requiredCollateralAsset,
+            params.minCollateralAmount,
+            params.interestRate,
+            params.duration,
+          ],
+        });
+        return { hash, success: true };
+      } catch (error) {
+        console.error("Failed to create lender offer:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["loanMarketplace", "activeLenderOffers"] });
+      queryClient.invalidateQueries({ queryKey: ["loanMarketplace", "lenderOffers"] });
     },
   });
 };
