@@ -16,6 +16,8 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import EventIcon from "@mui/icons-material/Event";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
+import { useSupportedAssets } from "@/common/hooks/api";
+import { useAccount } from "wagmi";
 
 export interface FiatFiltersState {
   fiatCurrency: string;
@@ -39,13 +41,15 @@ const durationOptions = [
   { label: "> 1 Year", value: "verylong" },
 ];
 
-const collateralOptions = ["All", "ETH", "WBTC", "USDC"];
-
 export const FiatFiltersSection = ({
   filters,
   onFiltersChange,
   onResetFilters,
 }: FiatFiltersProps) => {
+  const { isConnected } = useAccount();
+  const { supportedSymbols } = useSupportedAssets(isConnected);
+
+  const collateralOptions = ["All", ...supportedSymbols];
   const handleDurationChange = (duration: string) => {
     let updatedDurations = [...filters.durations];
     if (updatedDurations.includes(duration)) {

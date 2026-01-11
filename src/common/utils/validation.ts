@@ -30,23 +30,27 @@ export const validateInterestRate = (
 };
 
 /**
- * Validate loan duration
+ * Validate loan duration (all values should be in seconds)
  */
 export const validateLoanDuration = (
   duration: bigint,
   minDuration: bigint,
   maxDuration: bigint
 ): ValidationResult => {
+  const SECONDS_PER_DAY = BigInt(86400);
+
   if (duration < minDuration) {
+    const minDays = Number(minDuration / SECONDS_PER_DAY);
     return {
       valid: false,
-      error: `Loan duration cannot be less than ${minDuration.toString()} days`,
+      error: `Loan duration cannot be less than ${minDays} day${minDays !== 1 ? 's' : ''}`,
     };
   }
   if (duration > maxDuration) {
+    const maxDays = Number(maxDuration / SECONDS_PER_DAY);
     return {
       valid: false,
-      error: `Loan duration cannot exceed ${maxDuration.toString()} days`,
+      error: `Loan duration cannot exceed ${maxDays} days`,
     };
   }
   return { valid: true };

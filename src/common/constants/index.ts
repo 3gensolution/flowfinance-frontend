@@ -1,32 +1,32 @@
 export * from "./routes";
 
-// Token Assets Configuration
-const getEnv = (key: string, defaultValue = "0x0") => process.env[key] || defaultValue;
+import { TOKEN_ADDRESSES } from "@/common/lib/addresses";
 
+// Token Assets Configuration
 export const TOKEN_ASSETS = {
   USDC: {
     symbol: "USDC",
     name: "USD Coin",
     decimals: 6,
-    address: getEnv("NEXT_PUBLIC_USDC_ADDRESS"),
+    address: TOKEN_ADDRESSES.USDC,
   },
   DAI: {
     symbol: "DAI",
     name: "Dai Stablecoin",
     decimals: 18,
-    address: getEnv("NEXT_PUBLIC_DAI_ADDRESS"),
+    address: TOKEN_ADDRESSES.DAI,
   },
   WETH: {
     symbol: "WETH",
     name: "Wrapped Ether",
     decimals: 18,
-    address: getEnv("NEXT_PUBLIC_WETH_ADDRESS"),
+    address: TOKEN_ADDRESSES.WETH,
   },
   WBTC: {
     symbol: "WBTC",
     name: "Wrapped Bitcoin",
     decimals: 8,
-    address: getEnv("NEXT_PUBLIC_WBTC_ADDRESS"),
+    address: TOKEN_ADDRESSES.WBTC,
   },
 } as const;
 

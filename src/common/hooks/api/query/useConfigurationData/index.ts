@@ -227,3 +227,49 @@ export const useConfigurationParams = (enabled = true) => {
     refetchInterval: 600000, // Refetch every 10 minutes
   });
 };
+
+import { useReadContracts } from "wagmi";
+import { TOKEN_ASSETS, TokenSymbol } from "@/common/constants";
+
+export const useSupportedAssets = (enabled = true) => {
+  const assets = Object.values(TOKEN_ASSETS);
+
+  const { data: results, isLoading, error } = useReadContracts({
+    contracts: assets.map((asset) => ({
+      address: configurationContract.address as `0x${string}`,
+      abi: configurationContract.abi,
+      functionName: "isAssetSupported",
+      args: [asset.address],
+    })),
+    query: {
+      enabled: enabled,
+      refetchInterval: 300000, // Refetch every 5 minutes
+    }
+  });
+
+  const supportedStatus: Record<string, boolean> = {};
+  const supportedSymbols: TokenSymbol[] = [];
+
+  if (results) {
+    results.forEach((result, index) => {
+      // Check for both successfully returned data and status success
+      const isSupported = result.status === "success" && (result.result as unknown as boolean) === true;
+      const asset = assets[index];
+      if (asset && asset.address) {
+        supportedStatus[asset.address.toLowerCase()] = isSupported;
+        // Find symbol for this address
+        const symbolEntry = Object.entries(TOKEN_ASSETS).find(([_, t]) => t.address.toLowerCase() === asset.address.toLowerCase());
+        if (symbolEntry && isSupported) {
+          supportedSymbols.push(symbolEntry[0] as TokenSymbol);
+        }
+      }
+    });
+  }
+
+  return {
+    supportedStatus,
+    supportedSymbols,
+    isLoading,
+    error
+  };
+};

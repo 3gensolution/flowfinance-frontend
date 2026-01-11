@@ -29,15 +29,17 @@ import {
 } from "@mui/icons-material";
 import { LandingNavbar } from "@/ui/modules/components";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
-import { useConfigurationParams, useCreateLenderOffer } from "@/common/hooks/api";
+import { erc20Abi, formatUnits } from "viem";
+import { useAccount, useReadContract } from "wagmi";
+import { useConfigurationParams, useCreateLenderOffer, useSupportedAssets } from "@/common/hooks/api";
 import { TOKEN_ASSETS, TokenSymbol } from "@/common/constants";
 import { validateInterestRate, validateLoanDuration, validatePositiveAmount } from "@/common/utils/validation";
 
 export const LenderOfferPage: React.FC = () => {
   const router = useRouter();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const { data: configParams, isLoading: isLoadingConfig } = useConfigurationParams(isConnected);
+  const { supportedStatus, isLoading: isLoadingSupport } = useSupportedAssets(isConnected);
   const { mutate: createOffer, isPending: isCreating } = useCreateLenderOffer();
 
   const [lendTokenSymbol, setLendTokenSymbol] = useState<TokenSymbol>("USDC");
@@ -52,6 +54,27 @@ export const LenderOfferPage: React.FC = () => {
 
   const lendToken = TOKEN_ASSETS[lendTokenSymbol];
   const collateralToken = TOKEN_ASSETS[collateralTokenSymbol];
+
+  // Fetch Balances
+  const { data: lendTokenBalance } = useReadContract({
+    address: lendToken.address as `0x${string}`,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [address as `0x${string}`],
+    query: {
+      enabled: !!address && !!lendToken.address,
+    },
+  });
+
+  const { data: collateralTokenBalance } = useReadContract({
+    address: collateralToken.address as `0x${string}`,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [address as `0x${string}`],
+    query: {
+      enabled: !!address && !!collateralToken.address,
+    },
+  });
 
   const calculateProjectedEarnings = () => {
     const principal = parseFloat(amount) || 0;
@@ -69,6 +92,14 @@ export const LenderOfferPage: React.FC = () => {
     );
     if (!amountValidation.valid) {
       newErrors["amount"] = amountValidation.error || "Invalid amount";
+    } else {
+      // Check Balance
+      if (lendTokenBalance) {
+        const inputAmountBigInt = BigInt(parseInt(amount)) * BigInt(10) ** BigInt(lendToken.decimals);
+        if (inputAmountBigInt > lendTokenBalance) {
+          newErrors["amount"] = "Amount exceeds balance";
+        }
+      }
     }
 
     const collateralValidation = validatePositiveAmount(
@@ -88,8 +119,11 @@ export const LenderOfferPage: React.FC = () => {
         newErrors["apy"] = rateValidation.error || "Invalid rate";
       }
 
+      // Convert duration from days to seconds for comparison with contract values
+      const SECONDS_PER_DAY = BigInt(86400);
+      const durationInSeconds = BigInt(parseInt(duration) || 0) * SECONDS_PER_DAY;
       const durationValidation = validateLoanDuration(
-        BigInt(parseInt(duration) || 0),
+        durationInSeconds,
         configParams.minLoanDuration,
         configParams.maxLoanDuration
       );
@@ -100,6 +134,13 @@ export const LenderOfferPage: React.FC = () => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSetMaxLendAmount = () => {
+    if (lendTokenBalance) {
+      const maxAmount = formatUnits(lendTokenBalance, lendToken.decimals);
+      setAmount(maxAmount.split('.')[0]); // Simple primitive handling
+    }
   };
 
   const handlePublishOffer = async () => {
@@ -114,11 +155,24 @@ export const LenderOfferPage: React.FC = () => {
       return;
     }
 
+    // Validate token addresses are properly configured
+    if (!lendToken.address || lendToken.address === "0x0") {
+      setSubmitError(`Lending token address not configured. Please set NEXT_PUBLIC_${lendTokenSymbol}_ADDRESS environment variable.`);
+      return;
+    }
+
+    if (!collateralToken.address || collateralToken.address === "0x0") {
+      setSubmitError(`Collateral token address not configured. Please set NEXT_PUBLIC_${collateralTokenSymbol}_ADDRESS environment variable.`);
+      return;
+    }
+
     // Calculate amounts with proper decimals
-    const lendAmount = BigInt(parseInt(amount)) * BigInt(10 ** lendToken.decimals);
-    const minCollateralAmount = BigInt(parseInt(collateralAmount)) * BigInt(10 ** collateralToken.decimals);
+    const lendAmount =
+      BigInt(parseInt(amount)) * BigInt(10) ** BigInt(lendToken.decimals);
+    const minCollateralAmount =
+      BigInt(parseInt(collateralAmount)) * BigInt(10) ** BigInt(collateralToken.decimals);
     const interestRate = BigInt(Math.floor(apy * 100)); // Store as basis points (e.g., 1250 = 12.5%)
-    const durationDays = BigInt(parseInt(duration));
+    const durationInSeconds = BigInt(parseInt(duration)) * BigInt(86400);
 
     createOffer(
       {
@@ -127,7 +181,7 @@ export const LenderOfferPage: React.FC = () => {
         requiredCollateralAsset: collateralToken.address as `0x${string}`,
         minCollateralAmount,
         interestRate,
-        duration: durationDays,
+        duration: durationInSeconds,
       },
       {
         onSuccess: () => {
@@ -192,12 +246,12 @@ export const LenderOfferPage: React.FC = () => {
             Offer created successfully! Redirecting...
           </Alert>
         )}
-        <Box 
-          sx={{ 
-            maxWidth: '1920px', 
-            width: "100%", 
-            display: "flex", 
-            flexDirection: "column", 
+        <Box
+          sx={{
+            maxWidth: '1920px',
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
             gap: 4,
             padding: {
               sm: '0 24px',
@@ -210,17 +264,17 @@ export const LenderOfferPage: React.FC = () => {
           {/* Page Heading */}
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
             <Button
-              sx={{ 
-                color: "#2b8cee", 
+              sx={{
+                color: "#2b8cee",
                 background: "none",
-                padding: 0, 
+                padding: 0,
                 width: 'fit-content',
-                "&:hover": { 
-                  textDecoration: "underline" 
-                } 
+                "&:hover": {
+                  textDecoration: "underline"
+                }
               }}
               startIcon={<ArrowBack sx={{ fontSize: "1.125rem" }} />}
-              onClick={() => router.back() }
+              onClick={() => router.back()}
             >
               Back to Dashboard
             </Button>
@@ -287,11 +341,14 @@ export const LenderOfferPage: React.FC = () => {
                           "&.Mui-focused": { boxShadow: "0 0 0 3px rgba(43,140,238,0.1)" },
                         }}
                       >
-                        {Object.entries(TOKEN_ASSETS).map(([symbol, asset]) => (
-                          <MenuItem key={symbol} value={symbol}>
-                            {asset.symbol} ({asset.name})
-                          </MenuItem>
-                        ))}
+                        {Object.entries(TOKEN_ASSETS).map(([symbol, asset]) => {
+                          const isSupported = supportedStatus[asset.address?.toLowerCase() || ""] ?? false;
+                          return (
+                            <MenuItem key={symbol} value={symbol} disabled={!isSupported}>
+                              {asset.symbol} ({asset.name}) {!isSupported && "(Not supported)"}
+                            </MenuItem>
+                          );
+                        })}
                       </Select>
                     </FormControl>
                   </Box>
@@ -301,6 +358,17 @@ export const LenderOfferPage: React.FC = () => {
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
                         Amount
+                      </Typography>
+                      <Typography
+                        onClick={handleSetMaxLendAmount}
+                        sx={{
+                          color: "#2b8cee",
+                          fontSize: "0.875rem",
+                          cursor: "pointer",
+                          "&:hover": { textDecoration: "underline" }
+                        }}
+                      >
+                        Balance: {lendTokenBalance ? Number(formatUnits(lendTokenBalance, lendToken.decimals)).toFixed(2) : "0.00"}
                       </Typography>
                     </Box>
                     <TextField
@@ -525,11 +593,14 @@ export const LenderOfferPage: React.FC = () => {
                           "&.Mui-focused": { boxShadow: "0 0 0 3px rgba(43,140,238,0.1)" },
                         }}
                       >
-                        {Object.entries(TOKEN_ASSETS).map(([symbol, asset]) => (
-                          <MenuItem key={symbol} value={symbol}>
-                            {asset.symbol} ({asset.name})
-                          </MenuItem>
-                        ))}
+                        {Object.entries(TOKEN_ASSETS).map(([symbol, asset]) => {
+                          const isSupported = supportedStatus[asset.address?.toLowerCase() || ""] ?? false;
+                          return (
+                            <MenuItem key={symbol} value={symbol} disabled={!isSupported}>
+                              {asset.symbol} ({asset.name}) {!isSupported && "(Not supported)"}
+                            </MenuItem>
+                          );
+                        })}
                       </Select>
                     </FormControl>
                   </Box>
@@ -669,7 +740,7 @@ export const LenderOfferPage: React.FC = () => {
                 <Box sx={{ p: 1.5, pt: 0, display: "flex", flexDirection: "column", gap: 1 }}>
                   <Button
                     fullWidth
-                    disabled={isCreating || isLoadingConfig}
+                    disabled={isCreating || isLoadingConfig || isLoadingSupport || !supportedStatus[lendToken.address.toLowerCase()] || !supportedStatus[collateralToken.address.toLowerCase()]}
                     onClick={handlePublishOffer}
                     sx={{
                       height: 48,
