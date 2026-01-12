@@ -16,6 +16,12 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Chip,
+  TextField,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   Security,
@@ -23,218 +29,132 @@ import {
   Tune,
   ContentCopy,
   Logout,
-  Notifications,
-  Wallet,
-  Menu,
-  Dashboard,
-  MonetizationOn,
-  CreditCard,
-  Gavel,
-  Settings,
   LightMode,
   DarkMode,
+  Store,
+  VerifiedUser,
+  CloudUpload,
 } from "@mui/icons-material";
-
-interface NavItem {
-  label: string;
-  icon: React.ReactNode;
-  href: string;
-  isActive: boolean;
-}
+import { BorrowerDashboardHeader, BorrowerDashboardSidebar } from "@/ui/modules/components";
+import { useAccount } from "wagmi";
+import { formatEther, parseEther } from "viem";
+import { useSupplierDetails, useMinimumSupplierStake } from "@/common/hooks/api/query/useSupplierData";
+import { uploadToIPFS } from "@/common/utils/ipfs";
+import {
+  useAddSupplierStake,
+  useWithdrawSupplierStake,
+  useUpdateSupplierKYC,
+  useDeactivateSupplier,
+  useReactivateSupplier,
+  useRegisterSupplier,
+} from "@/common/hooks/api/mutation/useSupplierMutations";
 
 export const SettingsPage: React.FC = () => {
+  const { address } = useAccount();
   const [healthFactor, setHealthFactor] = useState(1.5);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [language, setLanguage] = useState("en");
   const [currency, setCurrency] = useState("usd");
   const [theme, setTheme] = useState("dark");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("Settings");
 
-  const navItems: NavItem[] = [
-    { label: "Dashboard", icon: <Dashboard />, href: "/dashboard", isActive: false },
-    { label: "Lending", icon: <MonetizationOn />, href: "/lending", isActive: false },
-    { label: "Borrowing", icon: <CreditCard />, href: "/borrowing", isActive: false },
-    { label: "Governance", icon: <Gavel />, href: "/governance", isActive: false },
-  ];
+  // Supplier UI State
+  const [stakeAmount, setStakeAmount] = useState("");
+  const [kycHash, setKycHash] = useState("");
+  const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+  const [isKycDialogOpen, setIsKycDialogOpen] = useState(false);
+
+  // IPFS Upload State
+  const [isUploadingKyc, setIsUploadingKyc] = useState(false);
+  const [isUploadingRegisterKyc, setIsUploadingRegisterKyc] = useState(false);
+
+  // Registration State
+  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
+  const [registerName, setRegisterName] = useState("");
+  const [registerRegNum, setRegisterRegNum] = useState("");
+  const [registerKycHash, setRegisterKycHash] = useState("");
+  const [registerStake, setRegisterStake] = useState("");
+
+  // Queries
+  const { data: supplierDetails, isLoading: isSupplierLoading } = useSupplierDetails(address);
+  const { data: minStake } = useMinimumSupplierStake();
+
+  // Mutations
+  const { mutateAsync: addStake, isPending: isAddingStake } = useAddSupplierStake();
+  const { mutateAsync: withdrawStake, isPending: isWithdrawingStake } = useWithdrawSupplierStake();
+  const { mutateAsync: updateKYC, isPending: isUpdatingKYC } = useUpdateSupplierKYC();
+  const { mutateAsync: deactivateSupplier, isPending: isDeactivating } = useDeactivateSupplier();
+  const { mutateAsync: reactivateSupplier, isPending: isReactivating } = useReactivateSupplier();
+  const { mutateAsync: registerSupplier, isPending: isRegistering } = useRegisterSupplier();
+
+  const handleAddStake = async () => {
+    try {
+      if (!stakeAmount) return;
+      await addStake(parseEther(stakeAmount));
+      setStakeAmount("");
+      setIsDepositDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to add stake:", error);
+    }
+  };
+
+  const handleWithdrawStake = async () => {
+    try {
+      await withdrawStake();
+      setIsWithdrawDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to withdraw stake:", error);
+    }
+  };
+
+  const handleUpdateKYC = async () => {
+    try {
+      if (!kycHash) return;
+      await updateKYC(kycHash);
+      setKycHash("");
+      setIsKycDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to update KYC:", error);
+    }
+  };
+
+  const handleRegister = async () => {
+    try {
+      if (!registerName || !registerRegNum || !registerKycHash || !registerStake) return;
+
+      await registerSupplier({
+        supplierType: 0, // Default to individual for now, could be an enum
+        name: registerName,
+        businessRegistrationNumber: registerRegNum,
+        kycDocumentHash: registerKycHash,
+        stakeAmount: parseEther(registerStake)
+      });
+
+      setRegisterName("");
+      setRegisterRegNum("");
+      setRegisterKycHash("");
+      setRegisterStake("");
+      setIsRegisterDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to register supplier", error);
+    }
+  };
+
+  const isSupplierRegistered = !!supplierDetails && supplierDetails.status !== 0; // Assuming 0 is Unregistered/None
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", overflow: "hidden" }}>
-      {/* Side Navigation */}
-      <Box
-        component="aside"
-        sx={{
-          display: { xs: "none", lg: "flex" },
-          width: 288,
-          flexDirection: "column",
-          borderRight: "1px solid",
-          borderColor: "#283039",
-          backgroundColor: "#101922",
-          flexShrink: 0,
-        }}
-      >
-        <Box sx={{ display: "flex", height: "100%", flexDirection: "column", justifyContent: "space-between", p: 1 }}>
-          {/* Top Section */}
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-            {/* Brand */}
-            <Box sx={{ display: "flex", gap: 1.5, px: 1, py: 1, alignItems: "center" }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 40,
-                  height: 40,
-                  borderRadius: "11px",
-                  background: "rgba(43, 140, 238, 0.1)",
-                  color: "#2b8cee",
-                }}
-              >
-                <Typography sx={{ fontSize: "1.75rem" }}>◇</Typography>
-              </Box>
-              <Box sx={{ display: "flex", flexDirection: "column" }}>
-                <Typography sx={{ fontSize: "1.125rem", fontWeight: "bold", color: "#fff" }}>
-                  FlowFinance
-                </Typography>
-                <Typography sx={{ fontSize: "0.75rem", fontWeight: 500, color: "#9dabb9" }}>
-                  DeFi Platform
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Nav Items */}
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 1 }}>
-              {navItems.map((item) => (
-                <Box
-                  key={item.label}
-                  component="a"
-                  href={item.href}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    px: 1.5,
-                    py: 1.5,
-                    borderRadius: "8px",
-                    color: "#9dabb9",
-                    textDecoration: "none",
-                    transition: "all 0.2s",
-                    "&:hover": {
-                      backgroundColor: "rgba(255,255,255,0.05)",
-                    },
-                    "& svg": { fontSize: "1.25rem" },
-                  }}
-                >
-                  <Box sx={{ color: "inherit" }}>{item.icon}</Box>
-                  <Typography sx={{ fontWeight: 500, fontSize: "0.875rem" }}>
-                    {item.label}
-                  </Typography>
-                </Box>
-              ))}
-
-              <Divider sx={{ my: 0.5, backgroundColor: "#283039" }} />
-
-              {/* Settings Link - Active */}
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                  px: 1.5,
-                  py: 1.5,
-                  borderRadius: "8px",
-                  backgroundColor: "rgba(43,140,238,0.1)",
-                  color: "#2b8cee",
-                  textDecoration: "none",
-                  "& svg": { fontSize: "1.25rem" },
-                }}
-              >
-                <Settings />
-                <Typography sx={{ fontWeight: 500, fontSize: "0.875rem" }}>Settings</Typography>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* User Profile */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              p: 1.5,
-              borderRadius: "12px",
-              backgroundColor: "#1a242f",
-              border: "1px solid #283039",
-            }}
-          >
-            <Avatar
-              sx={{
-                width: 40,
-                height: 40,
-                backgroundColor: "rgba(43,140,238,0.1)",
-              }}
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYaRyssmYEGah5fUQCM5AXy7O9jeTzXOQ4DbGJv_XL3G4ZWFmlO_S0z1yO2V8RzvI3erSgBerhSPPApdFyJNqRF2kckCmyc7yAA8bUTm1x9VROEbNwq7zHMdjK2W3uanut7N0kjdSCkUMWJU6g7lGOOZcjX46kRMqZzXKzNubVCApj8Dt8_DkxNTFhtsh2Wpy73ajtpEhGvglh9UTpspvI3r-qWvsfc00NzdOHZ4y1du5aAyo6tlEM-SSY2-_noeEWD18i37ta0LE"
-            />
-            <Box sx={{ overflow: "hidden", flex: 1 }}>
-              <Typography sx={{ fontSize: "0.875rem", fontWeight: "bold", color: "#fff" }}>
-                Alex M.
-              </Typography>
-              <Typography sx={{ fontSize: "0.75rem", color: "#9dabb9", textOverflow: "ellipsis", overflow: "hidden" }}>
-                0x12...48f9
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
+      <BorrowerDashboardSidebar
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+      />
 
       {/* Main Content */}
       <Box sx={{ flex: 1, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
         {/* Header */}
-        <Box
-          component="header"
-          sx={{
-            position: "sticky",
-            top: 0,
-            zIndex: 20,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderBottom: "1px solid #283039",
-            backgroundColor: "rgba(16,25,34,0.8)",
-            backdropFilter: "blur(12px)",
-            px: 2,
-            py: 1,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <IconButton
-              sx={{ display: { lg: "none" } }}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <Menu />
-            </IconButton>
-            <Typography sx={{ fontSize: "1.25rem", fontWeight: "bold", display: { xs: "none", sm: "block" }, color: "#fff" }}>
-              Settings
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <IconButton size="small">
-              <Notifications />
-            </IconButton>
-            <Button
-              variant="contained"
-              startIcon={<Wallet />}
-              sx={{
-                backgroundColor: "#2b8cee",
-                color: "#fff",
-                boxShadow: "0 8px 16px rgba(43,140,238,0.3)",
-                "&:hover": { backgroundColor: "#1a6bbd" },
-              }}
-            >
-              Wallet
-            </Button>
-          </Box>
-        </Box>
+        <BorrowerDashboardHeader />
 
         {/* Scrollable Content */}
         <Box sx={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
@@ -296,7 +216,7 @@ export const SettingsPage: React.FC = () => {
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         <Typography sx={{ fontSize: "1.25rem", fontWeight: "bold", color: "#fff" }}>
-                          0x123...48f9
+                          {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not Connect"}
                         </Typography>
                         <IconButton size="small" sx={{ color: "#94a3b8" }}>
                           <ContentCopy sx={{ fontSize: "1.125rem" }} />
@@ -305,7 +225,9 @@ export const SettingsPage: React.FC = () => {
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1, fontSize: "0.875rem", color: "#9dabb9" }}>
                         <Typography sx={{ fontSize: "0.875rem" }}>Connected via MetaMask</Typography>
                         <Box sx={{ width: 4, height: 4, backgroundColor: "#94a3b8", borderRadius: "50%" }} />
-                        <Typography sx={{ color: "#10b981", fontWeight: 500 }}>Active</Typography>
+                        <Typography sx={{ color: address ? "#10b981" : "#ef4444", fontWeight: 500 }}>
+                          {address ? "Active" : "Disconnected"}
+                        </Typography>
                       </Box>
                     </Box>
                   </Box>
@@ -377,6 +299,124 @@ export const SettingsPage: React.FC = () => {
                     </Button>
                   </Box>
                 </Box>
+              </Card>
+            </Box>
+
+            {/* Supplier Management Section */}
+            <Box component="section" sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                <Store sx={{ color: "#2b8cee", fontSize: "1.5rem" }} />
+                <Typography sx={{ fontSize: "1.125rem", fontWeight: "bold", color: "#fff" }}>
+                  Supplier Management
+                </Typography>
+              </Box>
+
+              <Card
+                sx={{
+                  background: "#1a242f",
+                  border: "1px solid #283039",
+                  borderRadius: "12px",
+                  p: 2,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                }}
+              >
+                {isSupplierLoading ? (
+                  <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : isSupplierRegistered ? (
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    {/* Supplier Details */}
+                    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
+                      <Box>
+                        <Typography sx={{ fontSize: "0.75rem", color: "#9dabb9" }}>Supplier Name</Typography>
+                        <Typography sx={{ fontSize: "1rem", fontWeight: "bold", color: "#fff" }}>
+                          {supplierDetails?.name}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography sx={{ fontSize: "0.75rem", color: "#9dabb9" }}>Registration Number</Typography>
+                        <Typography sx={{ fontSize: "1rem", fontWeight: "bold", color: "#fff" }}>
+                          {supplierDetails?.businessRegistrationNumber}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography sx={{ fontSize: "0.75rem", color: "#9dabb9" }}>Status</Typography>
+                        <Chip
+                          label={supplierDetails?.isActive ? "ACTIVE" : "INACTIVE"}
+                          sx={{
+                            mt: 0.5,
+                            backgroundColor: supplierDetails?.isActive ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+                            color: supplierDetails?.isActive ? "#10b981" : "#ef4444",
+                            border: `1px solid ${supplierDetails?.isActive ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`,
+                            fontWeight: "bold",
+                            fontSize: "0.75rem",
+                          }}
+                        />
+                      </Box>
+                      <Box>
+                        <Typography sx={{ fontSize: "0.75rem", color: "#9dabb9" }}>Staked Amount</Typography>
+                        <Typography sx={{ fontSize: "1rem", fontWeight: "bold", color: "#fff" }}>
+                          {supplierDetails?.stakeAmount ? supplierDetails.stakeAmount.toString() : "0"} WEI
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Divider sx={{ backgroundColor: "#283039" }} />
+
+                    {/* Actions */}
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setIsDepositDialogOpen(true)}
+                        disabled={!supplierDetails?.isActive}
+                        sx={{ color: "#10b981", borderColor: "#10b981", "&:hover": { borderColor: "#059669", backgroundColor: "rgba(16,185,129,0.05)" } }}
+                      >
+                        Add Stake
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setIsWithdrawDialogOpen(true)}
+                        sx={{ color: "#fbbf24", borderColor: "#fbbf24", "&:hover": { borderColor: "#d97706", backgroundColor: "rgba(251,191,36,0.05)" } }}
+                      >
+                        Withdraw Stake
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setIsKycDialogOpen(true)}
+                        startIcon={<VerifiedUser />}
+                      >
+                        Update KYC
+                      </Button>
+                      {supplierDetails?.isActive ? (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={() => deactivateSupplier(supplierDetails.walletAddress)}
+                          disabled={isDeactivating}
+                        >
+                          {isDeactivating ? "Deactivating..." : "Deactivate Supplier"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outlined"
+                          color="success"
+                          onClick={() => reactivateSupplier(supplierDetails!.walletAddress)}
+                          disabled={isReactivating}
+                        >
+                          {isReactivating ? "Reactivating..." : "Reactivate Supplier"}
+                        </Button>
+                      )}
+                    </Box>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, py: 4 }}>
+                    <Typography sx={{ color: "#9dabb9" }}>You are not registered as a supplier.</Typography>
+                    <Button variant="contained" onClick={() => setIsRegisterDialogOpen(true)}>
+                      Register as Supplier
+                    </Button>
+                  </Box>
+                )}
               </Card>
             </Box>
 
@@ -661,6 +701,188 @@ export const SettingsPage: React.FC = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Dialogs */}
+      <Dialog open={isDepositDialogOpen} onClose={() => setIsDepositDialogOpen(false)}>
+        <DialogTitle>Add Stake</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Amount (ETH)"
+            type="number"
+            fullWidth
+            value={stakeAmount}
+            onChange={(e) => setStakeAmount(e.target.value)}
+            inputProps={{ step: "0.00001" }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsDepositDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleAddStake} disabled={isAddingStake}>
+            {isAddingStake ? "Adding..." : "Add Stake"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isWithdrawDialogOpen} onClose={() => setIsWithdrawDialogOpen(false)}>
+        <DialogTitle>Withdraw Stake</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to withdraw your stake?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsWithdrawDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleWithdrawStake} disabled={isWithdrawingStake} color="warning">
+            {isWithdrawingStake ? "Withdrawing..." : "Withdraw"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isKycDialogOpen} onClose={() => setIsKycDialogOpen(false)}>
+        <DialogTitle>Update KYC Document</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Upload your KYC document to IPFS. The hash will be automatically generated.
+            </Typography>
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={isUploadingKyc ? <CircularProgress size={20} /> : <CloudUpload />}
+              disabled={isUploadingKyc}
+            >
+              {isUploadingKyc ? "Uploading to IPFS..." : "Upload Document"}
+              <input
+                type="file"
+                hidden
+                onChange={async (e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setIsUploadingKyc(true);
+                    try {
+                      const hash = await uploadToIPFS(e.target.files[0]);
+                      setKycHash(hash);
+                    } catch (err) {
+                      console.error(err);
+                      // Ideally show error toast here
+                    } finally {
+                      setIsUploadingKyc(false);
+                    }
+                  }
+                }}
+              />
+            </Button>
+            <TextField
+              label="IPFS Hash"
+              fullWidth
+              value={isUploadingKyc ? "" : kycHash}
+              placeholder="Hash will appear here after upload"
+              InputProps={{
+                readOnly: true,
+                endAdornment: isUploadingKyc ? <CircularProgress size={20} /> : null,
+              }}
+              variant="filled"
+              size="small"
+              sx={{ mt: 1 }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsKycDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleUpdateKYC} disabled={isUpdatingKYC || !kycHash || isUploadingKyc}>
+            {isUpdatingKYC ? "Updating..." : "Update"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={isRegisterDialogOpen} onClose={() => setIsRegisterDialogOpen(false)}>
+        <DialogTitle>Register as Supplier</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          <TextField
+            label="Name"
+            fullWidth
+            value={registerName}
+            onChange={(e) => setRegisterName(e.target.value)}
+          />
+          <TextField
+            label="Business Registration Number"
+            fullWidth
+            value={registerRegNum}
+            onChange={(e) => setRegisterRegNum(e.target.value)}
+          />
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="caption" color="text.secondary">KYC Document</Typography>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              startIcon={isUploadingRegisterKyc ? <CircularProgress size={20} /> : <CloudUpload />}
+              disabled={isUploadingRegisterKyc}
+            >
+              {isUploadingRegisterKyc ? "Uploading to IPFS..." : "Upload KYC Document"}
+              <input
+                type="file"
+                hidden
+                onChange={async (e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setIsUploadingRegisterKyc(true);
+                    try {
+                      const hash = await uploadToIPFS(e.target.files[0]);
+                      setRegisterKycHash(hash);
+                    } catch (err) {
+                      console.error(err);
+                    } finally {
+                      setIsUploadingRegisterKyc(false);
+                    }
+                  }
+                }}
+              />
+            </Button>
+            <TextField
+              label="IPFS Hash"
+              fullWidth
+              value={isUploadingRegisterKyc ? "" : registerKycHash}
+              placeholder="Hash will appear here after upload"
+              InputProps={{
+                readOnly: true,
+                endAdornment: isUploadingRegisterKyc ? <CircularProgress size={20} /> : null,
+              }}
+              variant="filled"
+              size="small"
+              helperText="Automatically generated from upload"
+            />
+          </Box>
+
+          <TextField
+            label="Initial Stake (ETH)"
+            type="number"
+            fullWidth
+            value={registerStake}
+            onChange={(e) => setRegisterStake(e.target.value)}
+            helperText={minStake ? `Minimum stake required: ${formatEther(minStake)} ETH` : "Loading requirement..."}
+            error={!!minStake && !!registerStake && parseEther(registerStake) < minStake}
+            inputProps={{ step: "0.00001" }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsRegisterDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleRegister}
+            disabled={
+              isRegistering ||
+              !registerKycHash ||
+              !registerName ||
+              !registerRegNum ||
+              !registerStake ||
+              isUploadingRegisterKyc ||
+              (!!minStake && !!registerStake && parseEther(registerStake) < minStake)
+            }
+            variant="contained"
+          >
+            {isRegistering ? "Registering..." : "Register"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

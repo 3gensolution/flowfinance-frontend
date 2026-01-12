@@ -6,7 +6,7 @@ export const ROUTES_SPEC = {
 
   // add all the routes here
   login: `/${API_VERSION}/auth/login`,
-  
+
   // Frontend pages
   home: "/",
   marketplace: "/marketplace",
