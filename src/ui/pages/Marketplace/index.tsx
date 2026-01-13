@@ -35,6 +35,7 @@ export const MarketplacePage = () => {
 
   // Fetch loan marketplace cards from contract
   const { data: loansData = [], isLoading, error } = useLoanMarketplaceCards();
+  console.log("loansData", loansData);
 
   // Helper function to convert duration string to days for comparison
   const getDurationDays = (durationStr: string): number => {

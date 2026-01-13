@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePublicClient, useWriteContract, useAccount } from "wagmi";
 import { loanMarketPlaceContract } from "@/common/lib/contract-addresses";
 
-import { erc20Abi } from "viem";
+import { tokensAbi } from "@/common/abi/tokensAbi";
 
 /**
  * Helper type for contract simulation error handling
@@ -48,7 +48,7 @@ export const useCreateLoanRequest = () => {
       // Check allowance
       const allowance = await publicClient.readContract({
         address: params.collateralToken,
-        abi: erc20Abi,
+        abi: tokensAbi,
         functionName: "allowance",
         args: [account, loanMarketPlaceContract.address as `0x${string}`],
       });
@@ -57,7 +57,7 @@ export const useCreateLoanRequest = () => {
         console.log("Insufficient allowance, requesting approval...");
         const approvalHash = await writeContractAsync({
           address: params.collateralToken,
-          abi: erc20Abi,
+          abi: tokensAbi,
           functionName: "approve",
           args: [loanMarketPlaceContract.address as `0x${string}`, params.collateralAmount],
         });
@@ -123,7 +123,7 @@ export const useCreateLenderOffer = () => {
       // Check allowance
       const allowance = await publicClient.readContract({
         address: params.lendAsset,
-        abi: erc20Abi,
+        abi: tokensAbi,
         functionName: "allowance",
         args: [account, loanMarketPlaceContract.address as `0x${string}`],
       });
@@ -132,7 +132,7 @@ export const useCreateLenderOffer = () => {
         console.log("Insufficient allowance, requesting approval...");
         const approvalHash = await writeContractAsync({
           address: params.lendAsset,
-          abi: erc20Abi,
+          abi: tokensAbi,
           functionName: "approve",
           args: [loanMarketPlaceContract.address as `0x${string}`, params.lendAmount],
         });
@@ -195,7 +195,7 @@ export const useAcceptLenderOffer = () => {
       // Check allowance
       const allowance = await publicClient.readContract({
         address: params.collateralToken,
-        abi: erc20Abi,
+        abi: tokensAbi,
         functionName: "allowance",
         args: [account, loanMarketPlaceContract.address as `0x${string}`],
       });
@@ -204,7 +204,7 @@ export const useAcceptLenderOffer = () => {
         console.log("Insufficient allowance, requesting approval...");
         const approvalHash = await writeContractAsync({
           address: params.collateralToken,
-          abi: erc20Abi,
+          abi: tokensAbi,
           functionName: "approve",
           args: [loanMarketPlaceContract.address as `0x${string}`, params.collateralAmount],
         });
@@ -256,7 +256,7 @@ export const useRepayLoan = () => {
       // Check allowance
       const allowance = await publicClient.readContract({
         address: params.loanToken,
-        abi: erc20Abi,
+        abi: tokensAbi,
         functionName: "allowance",
         args: [account, loanMarketPlaceContract.address as `0x${string}`],
       });
@@ -265,7 +265,7 @@ export const useRepayLoan = () => {
         console.log("Insufficient allowance, requesting approval...");
         const approvalHash = await writeContractAsync({
           address: params.loanToken,
-          abi: erc20Abi,
+          abi: tokensAbi,
           functionName: "approve",
           args: [loanMarketPlaceContract.address as `0x${string}`, params.amount],
         });
@@ -495,7 +495,7 @@ export const useFundLoanRequest = () => {
       // Check allowance
       const allowance = await publicClient.readContract({
         address: params.loanToken,
-        abi: erc20Abi,
+        abi: tokensAbi,
         functionName: "allowance",
         args: [account, loanMarketPlaceContract.address as `0x${string}`],
       });
@@ -504,7 +504,7 @@ export const useFundLoanRequest = () => {
         console.log("Insufficient allowance, requesting approval...");
         const approvalHash = await writeContractAsync({
           address: params.loanToken,
-          abi: erc20Abi,
+          abi: tokensAbi,
           functionName: "approve",
           args: [loanMarketPlaceContract.address as `0x${string}`, params.amount],
         });

@@ -20,11 +20,13 @@ import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import { ROUTES_SPEC } from "@/common/constants/routes";
+import { MintTokensDialog } from "../MintTokensDialog";
 
 export const MarketplaceNavbar = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMintDialogOpen, setIsMintDialogOpen] = useState(false);
 
   const navLinks = [
     { label: "Dashboard", href: ROUTES_SPEC.borrowerDashboard },
@@ -146,27 +148,43 @@ export const MarketplaceNavbar = () => {
           {/* Buttons */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             {!isMobile && (
-              <Button
-                variant="contained"
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  height: 40,
-                  paddingX: 2.5,
-                  backgroundColor: "#2b8cee",
-                  color: "white",
-                  fontWeight: 700,
-                  fontSize: "0.875rem",
-                  textTransform: "none",
-                  "&:hover": {
-                    backgroundColor: "rgba(43, 140, 238, 0.9)",
-                  },
-                }}
-                startIcon={<AccountBalanceWalletIcon />}
-              >
-                Connect Wallet
-              </Button>
+              <>
+                <Button
+                  onClick={() => setIsMintDialogOpen(true)}
+                  sx={{
+                    color: "#9dabb9",
+                    textTransform: "none",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    "&:hover": {
+                      color: "white",
+                    },
+                  }}
+                >
+                  Mint Tokens
+                </Button>
+                <Button
+                  variant="contained"
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    height: 40,
+                    paddingX: 2.5,
+                    backgroundColor: "#2b8cee",
+                    color: "white",
+                    fontWeight: 700,
+                    fontSize: "0.875rem",
+                    textTransform: "none",
+                    "&:hover": {
+                      backgroundColor: "rgba(43, 140, 238, 0.9)",
+                    },
+                  }}
+                  startIcon={<AccountBalanceWalletIcon />}
+                >
+                  Connect Wallet
+                </Button>
+              </>
             )}
 
             {isMobile && (
@@ -177,6 +195,11 @@ export const MarketplaceNavbar = () => {
           </Box>
         </Toolbar>
       </Box>
+
+      <MintTokensDialog
+        open={isMintDialogOpen}
+        onClose={() => setIsMintDialogOpen(false)}
+      />
 
       {/* Mobile Drawer */}
       <Drawer

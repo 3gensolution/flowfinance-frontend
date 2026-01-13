@@ -4,6 +4,7 @@ import {
   AppBar,
   Toolbar,
   Box,
+  Button,
   IconButton,
   Drawer,
 } from "@mui/material";
@@ -13,11 +14,13 @@ import CloseIcon from "@mui/icons-material/Close";
 // import { ROUTES_SPEC } from "@/common/constants/routes";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { StyledLink } from "../StyledLink";
+import { MintTokensDialog } from "../MintTokensDialog";
 
 export const LandingNavbar = () => {
   // const theme = useTheme();
   // const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMintDialogOpen, setIsMintDialogOpen] = useState(false);
 
   // const navLinks = [
   //   // { label: "Market", href: ROUTES_SPEC.marketplace },
@@ -130,8 +133,26 @@ export const LandingNavbar = () => {
             ))}
           </Box>
         )} */}
-        <ConnectButton />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Button
+            onClick={() => setIsMintDialogOpen(true)}
+            sx={{
+              color: "#cbd5e1",
+              textTransform: "none",
+              fontSize: "0.875rem",
+              fontWeight: 500,
+              "&:hover": { color: "white" },
+            }}
+          >
+            Mint Tokens
+          </Button>
+          <ConnectButton />
+        </Box>
       </Toolbar>
+      <MintTokensDialog
+        open={isMintDialogOpen}
+        onClose={() => setIsMintDialogOpen(false)}
+      />
       {/* Mobile Drawer */}
       <Drawer
         anchor="left"

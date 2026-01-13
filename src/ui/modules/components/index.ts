@@ -27,3 +27,4 @@ export * from "./BorrowerDashboardHeader";
 export * from "./StatsCard";
 export * from "./ActiveLoansTable";
 export * from "./PendingRequestsTable";
+export * from "./MintTokensDialog";

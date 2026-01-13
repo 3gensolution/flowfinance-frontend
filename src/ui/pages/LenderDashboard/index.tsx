@@ -32,6 +32,7 @@ import {
   VerticalAlignTop,
 } from "@mui/icons-material";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { MintTokensDialog } from "@/ui/modules/components";
 
 interface LoanData {
   id: string;
@@ -103,6 +104,7 @@ const mockLoansData: LoanData[] = [
 
 export const LenderDashboardPage: React.FC = () => {
   const [timeRange, setTimeRange] = useState("30D");
+  const [isMintDialogOpen, setIsMintDialogOpen] = useState(false);
 
   return (
     <Box
@@ -226,6 +228,18 @@ export const LenderDashboardPage: React.FC = () => {
                 borderLeft: "1px solid #334155",
               }}
             >
+              <Button
+                onClick={() => setIsMintDialogOpen(true)}
+                sx={{
+                  color: "#94a3b8",
+                  textTransform: "none",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  "&:hover": { color: "white" },
+                }}
+              >
+                Mint Tokens
+              </Button>
               <ConnectButton />
               <Avatar
                 sx={{
@@ -254,6 +268,10 @@ export const LenderDashboardPage: React.FC = () => {
             </Button>
           </Box>
         </Box>
+        <MintTokensDialog
+          open={isMintDialogOpen}
+          onClose={() => setIsMintDialogOpen(false)}
+        />
       </Box>
 
       {/* Main Content */}
@@ -375,58 +393,58 @@ export const LenderDashboardPage: React.FC = () => {
               color: "#60a5fa",
             },
           ].map((card) => (
-              <Card
-                key={card.title}
+            <Card
+              key={card.title}
+              sx={{
+                background: "#1e293b",
+                border: "1px solid #334155",
+                borderRadius: "12px",
+                p: 3,
+                position: "relative",
+                overflow: "hidden",
+                transition: "all 0.2s",
+                "&:hover": { borderColor: "rgba(43, 140, 238, 0.5)" },
+              }}
+            >
+              <Box
                 sx={{
-                  background: "#1e293b",
-                  border: "1px solid #334155",
-                  borderRadius: "12px",
-                  p: 3,
-                  position: "relative",
-                  overflow: "hidden",
-                  transition: "all 0.2s",
-                  "&:hover": { borderColor: "rgba(43, 140, 238, 0.5)" },
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  p: 2,
+                  opacity: 0.1,
+                  transition: "opacity 0.2s",
+                  fontSize: "3.75rem",
                 }}
               >
-                <Box
-                  sx={{
-                    position: "absolute",
-                    top: 0,
-                    right: 0,
-                    p: 2,
-                    opacity: 0.1,
-                    transition: "opacity 0.2s",
-                    fontSize: "3.75rem",
-                  }}
-                >
-                  {card.Icon && <card.Icon sx={{ fontSize: "3.75rem" }} />}
-                  {!card.Icon && <Typography sx={{ fontSize: "3.75rem" }}>%</Typography>}
-                </Box>
+                {card.Icon && <card.Icon sx={{ fontSize: "3.75rem" }} />}
+                {!card.Icon && <Typography sx={{ fontSize: "3.75rem" }}>%</Typography>}
+              </Box>
 
-                <Box sx={{ position: "relative", zIndex: 10 }}>
-                  <Typography sx={{ fontSize: "0.875rem", fontWeight: 500, color: "#94a3b8", mb: 1 }}>
-                    {card.title}
-                  </Typography>
-                  <Typography sx={{ fontSize: "1.5rem", fontWeight: "bold", color: "#fff", mb: 1 }}>
-                    {card.value}
-                  </Typography>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Chip
-                      icon={<TrendingUp sx={{ fontSize: "0.875rem !important" }} />}
-                      label={card.change}
-                      sx={{
-                        backgroundColor: "rgba(11, 218, 91, 0.1)",
-                        color: "#0bda5b",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                        height: "auto",
-                        padding: "4px 8px",
-                      }}
-                    />
-                    <Typography sx={{ fontSize: "0.75rem", color: "#64748b" }}>{card.label}</Typography>
-                  </Box>
+              <Box sx={{ position: "relative", zIndex: 10 }}>
+                <Typography sx={{ fontSize: "0.875rem", fontWeight: 500, color: "#94a3b8", mb: 1 }}>
+                  {card.title}
+                </Typography>
+                <Typography sx={{ fontSize: "1.5rem", fontWeight: "bold", color: "#fff", mb: 1 }}>
+                  {card.value}
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Chip
+                    icon={<TrendingUp sx={{ fontSize: "0.875rem !important" }} />}
+                    label={card.change}
+                    sx={{
+                      backgroundColor: "rgba(11, 218, 91, 0.1)",
+                      color: "#0bda5b",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      height: "auto",
+                      padding: "4px 8px",
+                    }}
+                  />
+                  <Typography sx={{ fontSize: "0.75rem", color: "#64748b" }}>{card.label}</Typography>
                 </Box>
-              </Card>
+              </Box>
+            </Card>
           ))}
         </Box>
 

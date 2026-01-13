@@ -6,8 +6,6 @@ import {
   Button,
   Typography,
   TextField,
-  Select,
-  MenuItem,
   FormControlLabel,
   Radio,
   RadioGroup,
@@ -16,8 +14,10 @@ import {
   Divider,
   FormControl,
   InputAdornment,
+  InputLabel,
   Alert,
   CircularProgress as MuiCircularProgress,
+  NativeSelect,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -28,18 +28,28 @@ import {
   LocalGasStation,
 } from "@mui/icons-material";
 import { LandingNavbar } from "@/ui/modules/components";
+import { tokensAbi } from "@/common/abi/tokensAbi";
 import { useRouter } from "next/navigation";
-import { erc20Abi, formatUnits } from "viem";
+import { formatUnits } from "viem";
 import { useAccount, useReadContract } from "wagmi";
 import { useConfigurationParams, useCreateLenderOffer, useSupportedAssets } from "@/common/hooks/api";
 import { TOKEN_ASSETS, TokenSymbol } from "@/common/constants";
 import { validateInterestRate, validateLoanDuration, validatePositiveAmount } from "@/common/utils/validation";
 
+// 🔹 Single source of truth
+const TOKEN_SYMBOLS: TokenSymbol[] = [
+  "USDC",
+  "DAI",
+  "WETH",
+  "WBTC",
+  "USDT",
+];
+
 export const LenderOfferPage: React.FC = () => {
   const router = useRouter();
   const { isConnected, address } = useAccount();
   const { data: configParams, isLoading: isLoadingConfig } = useConfigurationParams(isConnected);
-  const { supportedStatus, isLoading: isLoadingSupport } = useSupportedAssets(isConnected);
+  const { supportedStatus = {}, isLoading: isLoadingSupport } = useSupportedAssets(isConnected);
   const { mutate: createOffer, isPending: isCreating } = useCreateLenderOffer();
 
   const [lendTokenSymbol, setLendTokenSymbol] = useState<TokenSymbol>("USDC");
@@ -58,7 +68,7 @@ export const LenderOfferPage: React.FC = () => {
   // Fetch Balances
   const { data: lendTokenBalance } = useReadContract({
     address: lendToken.address as `0x${string}`,
-    abi: erc20Abi,
+    abi: tokensAbi,
     functionName: "balanceOf",
     args: [address as `0x${string}`],
     query: {
@@ -66,15 +76,15 @@ export const LenderOfferPage: React.FC = () => {
     },
   });
 
-  const { data: collateralTokenBalance } = useReadContract({
-    address: collateralToken.address as `0x${string}`,
-    abi: erc20Abi,
-    functionName: "balanceOf",
-    args: [address as `0x${string}`],
-    query: {
-      enabled: !!address && !!collateralToken.address,
-    },
-  });
+  // const { data: collateralTokenBalance } = useReadContract({
+  //   address: collateralToken.address as `0x${string}`,
+  //   abi: tokensAbi,
+  //   functionName: "balanceOf",
+  //   args: [address as `0x${string}`],
+  //   query: {
+  //     enabled: !!address && !!collateralToken.address,
+  //   },
+  // });
 
   const calculateProjectedEarnings = () => {
     const principal = parseFloat(amount) || 0;
@@ -139,7 +149,7 @@ export const LenderOfferPage: React.FC = () => {
   const handleSetMaxLendAmount = () => {
     if (lendTokenBalance) {
       const maxAmount = formatUnits(lendTokenBalance, lendToken.decimals);
-      setAmount(maxAmount.split('.')[0]); // Simple primitive handling
+      setAmount(maxAmount.split('.')[0]);
     }
   };
 
@@ -323,8 +333,12 @@ export const LenderOfferPage: React.FC = () => {
                     <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
                       I want to lend
                     </Typography>
-                    <FormControl variant="outlined" size="small">
-                      <Select
+                    <FormControl fullWidth variant="standard" size="small">
+                      <InputLabel id="lend-token-select-label" shrink>
+                        I want to lend
+                      </InputLabel>
+                      <NativeSelect
+                        id="lend-token-native-select"
                         value={lendTokenSymbol}
                         onChange={(e) => setLendTokenSymbol(e.target.value as TokenSymbol)}
                         sx={{
@@ -335,21 +349,24 @@ export const LenderOfferPage: React.FC = () => {
                           border: "1px solid #3b4754",
                           fontSize: "1rem",
                           fontWeight: 400,
+                          px: 1,
                           "&:hover": { borderColor: "#3b4754" },
-                          "& .MuiOutlinedInput-notchedOutline": { borderColor: "#3b4754" },
-                          "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#2b8cee", borderWidth: 1 },
-                          "&.Mui-focused": { boxShadow: "0 0 0 3px rgba(43,140,238,0.1)" },
+                          "&::before, &::after": { display: "none" },
+                        }}
+                        inputProps={{
+                          name: 'lendToken',
                         }}
                       >
-                        {Object.entries(TOKEN_ASSETS).map(([symbol, asset]) => {
+                        {TOKEN_SYMBOLS.map((symbol) => {
+                          const asset = TOKEN_ASSETS[symbol];
                           const isSupported = supportedStatus[asset.address?.toLowerCase() || ""] ?? false;
                           return (
-                            <MenuItem key={symbol} value={symbol} disabled={!isSupported}>
+                            <option key={symbol} value={symbol} disabled={!isSupported} style={{ backgroundColor: "#111418", color: "#fff" }}>
                               {asset.symbol} ({asset.name}) {!isSupported && "(Not supported)"}
-                            </MenuItem>
+                            </option>
                           );
                         })}
-                      </Select>
+                      </NativeSelect>
                     </FormControl>
                   </Box>
 
@@ -575,8 +592,12 @@ export const LenderOfferPage: React.FC = () => {
                     <Typography sx={{ color: "#fff", fontSize: "1rem", fontWeight: 500 }}>
                       Accepted Collateral
                     </Typography>
-                    <FormControl variant="outlined" size="small">
-                      <Select
+                    <FormControl fullWidth variant="standard" size="small">
+                      <InputLabel id="collateral-token-select-label" shrink>
+                        Accepted Collateral
+                      </InputLabel>
+                      <NativeSelect
+                        id="collateral-token-native-select"
                         value={collateralTokenSymbol}
                         onChange={(e) => setCollateralTokenSymbol(e.target.value as TokenSymbol)}
                         sx={{
@@ -587,21 +608,24 @@ export const LenderOfferPage: React.FC = () => {
                           border: "1px solid #3b4754",
                           fontSize: "1rem",
                           fontWeight: 400,
+                          px: 1,
                           "&:hover": { borderColor: "#3b4754" },
-                          "& .MuiOutlinedInput-notchedOutline": { borderColor: "#3b4754" },
-                          "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#2b8cee", borderWidth: 1 },
-                          "&.Mui-focused": { boxShadow: "0 0 0 3px rgba(43,140,238,0.1)" },
+                          "&::before, &::after": { display: "none" },
+                        }}
+                        inputProps={{
+                          name: 'collateralToken',
                         }}
                       >
-                        {Object.entries(TOKEN_ASSETS).map(([symbol, asset]) => {
+                        {TOKEN_SYMBOLS.map((symbol) => {
+                          const asset = TOKEN_ASSETS[symbol];
                           const isSupported = supportedStatus[asset.address?.toLowerCase() || ""] ?? false;
                           return (
-                            <MenuItem key={symbol} value={symbol} disabled={!isSupported}>
+                            <option key={symbol} value={symbol} disabled={!isSupported} style={{ backgroundColor: "#111418", color: "#fff" }}>
                               {asset.symbol} ({asset.name}) {!isSupported && "(Not supported)"}
-                            </MenuItem>
+                            </option>
                           );
                         })}
-                      </Select>
+                      </NativeSelect>
                     </FormControl>
                   </Box>
 

@@ -28,6 +28,12 @@ export const TOKEN_ASSETS = {
     decimals: 8,
     address: TOKEN_ADDRESSES.WBTC,
   },
+  USDT: {
+    symbol: "USDT",
+    name: "Tether USD",
+    decimals: 6,
+    address: TOKEN_ADDRESSES.USDT,
+  },
 } as const;
 
 export type TokenSymbol = keyof typeof TOKEN_ASSETS;

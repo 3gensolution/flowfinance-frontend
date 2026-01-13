@@ -7,6 +7,7 @@ export const TOKEN_ADDRESSES = {
   DAI: getAddress(process.env["NEXT_PUBLIC_DAI_ADDRESS"]!),
   WETH: getAddress(process.env["NEXT_PUBLIC_WETH_ADDRESS"]!),
   WBTC: getAddress(process.env["NEXT_PUBLIC_WBTC_ADDRESS"]!),
+  USDT: getAddress(process.env["NEXT_PUBLIC_USDT_ADDRESS"]!),
 } as const;
 
 // --------------------

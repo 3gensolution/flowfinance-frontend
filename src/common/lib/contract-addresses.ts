@@ -3,7 +3,8 @@ import { configurationAbi } from "../abi/configurationAbi";
 import { fiatLoanBridge } from "../abi/FiatLoanAbi";
 import { loanMarketPlaceAbi } from "../abi/loanMarketPlace";
 import { supplierRegistry } from "../abi/supplyRegistry";
-import { CONTRACT_ADDRESSES } from "./addresses";
+import { tokensAbi } from "../abi/tokensAbi";
+import { CONTRACT_ADDRESSES, TOKEN_ADDRESSES } from "./addresses";
 
 export const loanMarketPlaceContract = {
   address: CONTRACT_ADDRESSES.LOAN_MARKETPLACE,
@@ -28,4 +29,29 @@ export const supplyRegisterContract = {
 export const configurationContract = {
   address: CONTRACT_ADDRESSES.CONFIGURATION,
   abi: configurationAbi,
+};
+
+export const tokenDAIContract = {
+  address: TOKEN_ADDRESSES.DAI,
+  abi: tokensAbi,
+};
+
+export const tokenWETHContract = {
+  address: TOKEN_ADDRESSES.WETH,
+  abi: tokensAbi,
+};
+
+export const tokenWBTCContract = {
+  address: TOKEN_ADDRESSES.WBTC,
+  abi: tokensAbi,
+};
+
+export const tokenUSDTContract = {
+  address: TOKEN_ADDRESSES.USDT,
+  abi: tokensAbi,
+};
+
+export const tokenUSDCContract = {
+  address: TOKEN_ADDRESSES.USDC,
+  abi: tokensAbi,
 };

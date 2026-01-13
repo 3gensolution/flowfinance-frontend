@@ -243,7 +243,7 @@ export const useSupportedAssets = (enabled = true) => {
     })),
     query: {
       enabled: enabled,
-      refetchInterval: 300000, // Refetch every 5 minutes
+      refetchInterval: 300000,
     }
   });
 
