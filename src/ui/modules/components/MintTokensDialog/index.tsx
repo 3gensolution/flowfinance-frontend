@@ -27,7 +27,7 @@ interface MintTokensDialogProps {
     onClose: () => void;
 }
 
-const MAX_MINT_THRESHOLD = 100000n;
+const MAX_MINT_THRESHOLD = BigInt(100000);
 
 // 🔹 Single source of truth
 const TOKEN_SYMBOLS: TokenSymbol[] = [

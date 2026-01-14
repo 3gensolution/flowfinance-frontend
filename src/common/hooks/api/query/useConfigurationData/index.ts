@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { usePublicClient } from "wagmi";
+import { usePublicClient, useReadContracts } from "wagmi";
 import { configurationContract } from "@/common/lib/contract-addresses";
 
 export const useTokenPriceInUSD = (tokenAddress: `0x${string}` | undefined, enabled = true) => {
@@ -228,7 +228,6 @@ export const useConfigurationParams = (enabled = true) => {
   });
 };
 
-import { useReadContracts } from "wagmi";
 import { TOKEN_ASSETS, TokenSymbol } from "@/common/constants";
 
 export const useSupportedAssets = (enabled = true) => {

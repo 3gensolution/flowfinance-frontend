@@ -42,7 +42,7 @@ export const useTextFieldStyles = ({
       placeholder: focusedPlaceholder,
     } = stateStyle.focused.colors;
 
-     const successColor = "#4CAF50";
+    const successColor = "#4CAF50";
 
     const resolveBorderColor = (isFocused: boolean): string => {
       if (error) {
@@ -56,7 +56,7 @@ export const useTextFieldStyles = ({
       }
       return defaultBorder;
     };
-    
+
     return {
       width: "100%",
       backgroundColor: defaultBackground,
@@ -77,9 +77,9 @@ export const useTextFieldStyles = ({
           opacity: 1,
         },
         "&:-webkit-autofill, &:-webkit-autofill:hover, &:-webkit-autofill:focus, &:-webkit-autofill:active":
-          {
-            transition: "background-color 600000s 0s, color 600000s 0s",
-          },
+        {
+          transition: "background-color 600000s 0s, color 600000s 0s",
+        },
         "&[data-autocompleted]": {
           backgroundColor: "transparent !important",
         },
@@ -132,5 +132,5 @@ export const useTextFieldStyles = ({
         },
       },
     };
-  }, [themeVariant, error, borderRadius, fontSize, padding, borderWidth, textField]);
+  }, [themeVariant, error, success, borderRadius, fontSize, padding, borderWidth, textField]);
 };

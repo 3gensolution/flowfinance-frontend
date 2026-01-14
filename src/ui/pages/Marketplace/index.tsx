@@ -1,15 +1,8 @@
 "use client";
 
-import {
-  Box,
-  Grid,
-  Typography,
-  Card,
-  Pagination,
-  CircularProgress,
-} from "@mui/material";
-import { useState, useMemo } from "react";
-import { LoanCard } from "../../modules/components/LoanCard";
+import { Box, Grid, Typography, Card, Pagination, CircularProgress } from "@mui/material";
+import { useState, useMemo, useCallback } from "react";
+import { LoanCard, LoanCardProps } from "../../modules/components/LoanCard";
 import {
   FiltersSection,
   FiltersState,
@@ -20,6 +13,9 @@ import {
 } from "../../modules/components/MarketplaceToolbar";
 import { LandingNavbar } from "@/ui/modules/components";
 import { useLoanMarketplaceCards } from "@/common/hooks/api/query/useLoanMarketplaceData";
+import { useAccount } from "wagmi";
+import { useAcceptLenderOffer, useFundLoanRequest } from "@/common/hooks/api/mutation/useLoanMarketplaceMutations";
+import { toast } from "sonner";
 
 export const MarketplacePage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -37,6 +33,62 @@ export const MarketplacePage = () => {
   const { data: loansData = [], isLoading, error } = useLoanMarketplaceCards();
   console.log("loansData", loansData);
 
+  const { address: accountAddress } = useAccount();
+
+  // Mutations
+  const acceptOffer = useAcceptLenderOffer();
+  const fundRequest = useFundLoanRequest();
+
+  const handleAction = useCallback(async (cardProps: LoanCardProps) => {
+    if (cardProps.rawId === undefined) return;
+
+    try {
+      if (cardProps.actionType === "borrow") {
+        toast.promise(
+          acceptOffer.mutateAsync({
+            offerId: cardProps.rawId,
+            collateralAmount: cardProps.rawCollateralAmount || BigInt(0),
+            collateralToken: cardProps.rawCollateralToken as `0x${string}`,
+          }),
+          {
+            loading: "Accepting offer...",
+            success: "Offer accepted successfully!",
+            error: (err) => `Failed to accept offer: ${err.message}`,
+          }
+        );
+      } else if (cardProps.actionType === "fund") {
+        toast.promise(
+          fundRequest.mutateAsync({
+            requestId: cardProps.rawId,
+            loanToken: cardProps.rawToken as `0x${string}`,
+            amount: cardProps.rawAmount || BigInt(0),
+          }),
+          {
+            loading: "Funding loan request...",
+            success: "Loan request funded successfully!",
+            error: (err) => `Failed to fund loan: ${err.message}`,
+          }
+        );
+      }
+    } catch (err) {
+      console.error("Action failed:", err);
+    }
+  }, [acceptOffer, fundRequest]);
+
+  const loansWithHandlers = useMemo(() => {
+    return loansData.map(loan => {
+      const isCreator = accountAddress?.toLowerCase() === loan.rawCreatorAddress?.toLowerCase();
+
+      // Hide button if the connected user is the creator of the listing
+
+      return {
+        ...loan,
+        onFundClick: handleAction,
+        hideButton: isCreator
+      };
+    });
+  }, [loansData, accountAddress, handleAction]);
+
   // Helper function to convert duration string to days for comparison
   const getDurationDays = (durationStr: string): number => {
     const num = parseInt(durationStr);
@@ -47,16 +99,16 @@ export const MarketplacePage = () => {
   };
 
   // Helper function to categorize duration
-  const getDurationCategory = (durationStr: string): string => {
+  const getDurationCategory = useCallback((durationStr: string): string => {
     const days = getDurationDays(durationStr);
     if (days <= 14) return "short";
     if (days <= 60) return "medium";
     return "long";
-  };
+  }, []);
 
   // Filter loans based on current filters
   const filteredLoans = useMemo(() => {
-    return loansData.filter((loan) => {
+    return loansWithHandlers.filter((loan) => {
       // Filter by collateral
       if (!filters.collaterals.includes("All") && !filters.collaterals.includes(loan.collateralToken)) {
         return false;
@@ -80,7 +132,7 @@ export const MarketplacePage = () => {
 
       return true;
     });
-  }, [filters, loansData]);
+  }, [filters, loansWithHandlers, getDurationCategory]);
 
   // Calculate pagination with filtered data
   const itemsPerPage = 6;

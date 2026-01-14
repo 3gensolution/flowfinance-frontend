@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePublicClient, useWriteContract, useAccount } from "wagmi";
 import { fiatLoanBridgeContract } from "@/common/lib/contract-addresses";
+import { tokensAbi } from "@/common/abi/tokensAbi";
 
 /**
  * Helper type for contract simulation error handling
@@ -42,6 +43,28 @@ export const useCreateFiatLoanRequest = () => {
     }) => {
       if (!publicClient) throw new Error("Public client not available");
       if (!account) throw new Error("Wallet not connected");
+
+      // Check allowance
+      const allowance = await publicClient.readContract({
+        address: params.collateralAsset,
+        abi: tokensAbi,
+        functionName: "allowance",
+        args: [account, fiatLoanBridgeContract.address as `0x${string}`],
+      });
+
+      if (allowance < params.collateralAmount) {
+        console.log("Insufficient allowance, requesting approval...");
+        const approvalHash = await writeContractAsync({
+          address: params.collateralAsset,
+          abi: tokensAbi,
+          functionName: "approve",
+          args: [fiatLoanBridgeContract.address as `0x${string}`, params.collateralAmount],
+        });
+
+        console.log("Waiting for approval confirmation...");
+        await publicClient.waitForTransactionReceipt({ hash: approvalHash });
+        console.log("Approval confirmed.");
+      }
 
       const contractConfig = {
         address: fiatLoanBridgeContract.address as `0x${string}`,

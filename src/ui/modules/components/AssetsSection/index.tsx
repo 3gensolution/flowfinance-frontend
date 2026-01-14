@@ -8,11 +8,14 @@ import {
   useTheme,
 } from "@mui/material";
 
+import { useSupportedAssets } from "@/common/hooks/api/query/useConfigurationData";
+
 export const AssetsSection = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const { supportedSymbols, isLoading } = useSupportedAssets();
 
-  const assets = [
+  const allAssets = [
     { symbol: "ETH", name: "Ethereum", color: "#4f46e5", apy: "3.2%" },
     { symbol: "USDC", name: "USD Coin", color: "#3b82f6", apy: "5.4%" },
     { symbol: "WBTC", name: "Bitcoin", color: "#f97316", apy: "1.1%" },
@@ -20,6 +23,11 @@ export const AssetsSection = () => {
     { symbol: "MATIC", name: "Polygon", color: "#a855f7", apy: "6.2%" },
     { symbol: "UNI", name: "Uniswap", color: "#ec4899", apy: "8.5%" },
   ];
+
+  // Filter assets to only show supported ones
+  const assets = isLoading
+    ? allAssets
+    : allAssets.filter(asset => supportedSymbols.includes(asset.symbol as any));
 
   return (
     <Box component="section" sx={{ py: 10 }}>

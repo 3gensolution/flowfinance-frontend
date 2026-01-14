@@ -33,67 +33,127 @@ import {
 import { AppButton } from "@/ui/modules/components";
 import { toast } from "sonner";
 import { useAccount } from "wagmi";
-import { useBorrowerLoans, useLenderOffersByUser } from "@/common/hooks/api/query/useLoanMarketplaceData";
+import {
+  useBorrowerLoans,
+  useLenderOffersByUser,
+  useLoanDetailsList,
+  useLenderOfferDetailsList,
+  useUserLoanRequests,
+  useLoanRequestDetailsList
+} from "@/common/hooks/api/query/useLoanMarketplaceData";
+import { formatUnits } from "viem";
+import { getTokenByAddress } from "@/common/constants";
 
 export const BorrowerDashboardPage: React.FC = () => {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const { address } = useAccount();
 
-  // Fetch borrower data
-  const {
-    data: borrowerLoanIds = [],
-    isLoading: borrowerLoansLoading,
-  } = useBorrowerLoans(address as `0x${string}` | undefined, !!address);
+  // 1. Fetch IDs
+  const { data: borrowerLoanIds = [], isLoading: borrowerLoansLoading } = useBorrowerLoans(address, !!address);
+  const { data: userLoanRequestIds = [], isLoading: userRequestsLoading } = useUserLoanRequests(address, !!address);
+  const { data: lenderOfferIds = [], isLoading: lenderOffersLoading } = useLenderOffersByUser(address, !!address);
 
-  // Fetch lender data
-  const {
-    data: lenderOfferIds = [],
-    isLoading: lenderOffersLoading,
-  } = useLenderOffersByUser(address as `0x${string}` | undefined, !!address);
+  // 2. Fetch full details
+  const { data: borrowerLoanDetails = [], isLoading: detailsLoading } = useLoanDetailsList(borrowerLoanIds as bigint[], !!borrowerLoanIds.length);
+  const { data: userLoanRequestDetails = [], isLoading: reqDetailsLoading } = useLoanRequestDetailsList(userLoanRequestIds as bigint[], !!userLoanRequestIds.length);
+  const { data: lenderOfferDetails = [], isLoading: offerDetailsLoading } = useLenderOfferDetailsList(lenderOfferIds as bigint[], !!lenderOfferIds.length);
 
-  // Transform borrower loan IDs to LoanRecord format
-  // Note: In production, you would fetch full loan details from contract
-  const borrowerLoanIdsArray = Array.isArray(borrowerLoanIds) ? borrowerLoanIds : [];
-  const borrowerLoans: LoanRecord[] = borrowerLoanIdsArray.map((id: any, index: number) => ({
-    id: `#${typeof id === 'bigint' ? id.toString() : id}`,
-    collateral: index % 2 === 0 ? "ETH" : "WBTC",
-    collateralIcon: undefined,
-    borrowed: `${5000 + index * 1000} USDC`,
-    apy: `${(4.5 + index * 0.5).toFixed(1)}%`,
-    healthFactor: 1.85 - index * 0.2,
-    healthFactorLabel: (1.85 - index * 0.2) > 1.25 ? "Safe" : "Risk" as "Safe" | "Risk",
-    onRepayClick: () => toast.success(`Repay loan #${typeof id === 'bigint' ? id.toString() : id}`),
-    onAddCollateralClick: () => toast.success(`Add collateral to #${typeof id === 'bigint' ? id.toString() : id}`),
-  }));
+  const isLoading = borrowerLoansLoading || userRequestsLoading || lenderOffersLoading || detailsLoading || reqDetailsLoading || offerDetailsLoading;
 
-  // Transform lender offers to pending request format
-  // Note: In production, you would fetch full offer details from contract
-  const lenderOfferIdsArray = Array.isArray(lenderOfferIds) ? lenderOfferIds : [];
-  const lenderOffers: PendingRequest[] = lenderOfferIdsArray.map((id: any, index: number) => ({
-    id: `OFFER#${typeof id === 'bigint' ? id.toString() : id}`,
-    assetRequested: `${10000 + index * 5000} USDC`,
-    collateralOffered: `${5 + index * 1} ETH`,
-    status: index % 3 === 0 ? "Matching" : index % 3 === 1 ? "Pending" : "Approved" as "Matching" | "Pending" | "Approved",
-    onCancelClick: () => toast.success(`Cancelled offer #${typeof id === 'bigint' ? id.toString() : id}`),
-  }));
+  // Transform borrower active loans
+  const borrowerLoans: LoanRecord[] = (borrowerLoanDetails as any[]).map((loan) => {
+    const borrowToken = getTokenByAddress(loan.borrowAsset);
+    const collateralToken = getTokenByAddress(loan.collateralAsset);
+    const principal = borrowToken ? formatUnits(loan.principalAmount, borrowToken.decimals) : "0";
 
-  const hasBorrowerData = borrowerLoans.length > 0;
+    return {
+      id: `#${loan.loanId.toString()}`,
+      collateral: collateralToken?.symbol || "Unknown",
+      collateralIcon: undefined,
+      borrowed: `${Number(principal).toLocaleString()} ${borrowToken?.symbol || ""}`,
+      apy: `${(Number(loan.interestRate) / 100).toFixed(1)}%`,
+      healthFactor: 2.0, // Placeholder or fetch health factor hook if needed
+      healthFactorLabel: "Safe",
+      onRepayClick: () => toast.success(`Repaying loan #${loan.loanId.toString()}`),
+      onAddCollateralClick: () => toast.success(`Adding collateral to #${loan.loanId.toString()}`),
+    };
+  });
+
+  // Transform lender offers/requests
+  const lenderOffers: PendingRequest[] = (lenderOfferDetails as any[]).map((offer) => {
+    const lendToken = getTokenByAddress(offer.lendAsset);
+    const collateralToken = getTokenByAddress(offer.requiredCollateralAsset);
+    const amount = lendToken ? formatUnits(offer.lendAmount, lendToken.decimals) : "0";
+
+    // contract status 0 = PENDING, 1 = ACTIVE/ACCEPTED, etc.
+    // UI expects "Matching" | "Pending" | "Approved"
+    let uiStatus: "Matching" | "Pending" | "Approved" = "Pending";
+    if (offer.status === 0) uiStatus = "Matching";
+    if (offer.status === 1) uiStatus = "Approved";
+
+    return {
+      id: `OFFER#${offer.offerId.toString()}`,
+      assetRequested: `${Number(amount).toLocaleString()} ${lendToken?.symbol || ""}`,
+      collateralOffered: collateralToken?.symbol || "Unknown",
+      status: uiStatus,
+      onCancelClick: () => toast.success(`Cancelling offer #${offer.offerId.toString()}`),
+    };
+  });
+
+  // Also transform user loan requests (as borrower)
+  const borrowerPendingRequests: PendingRequest[] = (userLoanRequestDetails as any[]).map((req) => {
+    const borrowToken = getTokenByAddress(req.borrowAsset);
+    const collateralToken = getTokenByAddress(req.collateralToken);
+    const amount = borrowToken ? formatUnits(req.borrowAmount, borrowToken.decimals) : "0";
+
+    let uiStatus: "Matching" | "Pending" | "Approved" = "Pending";
+    if (req.status === 0) uiStatus = "Matching";
+
+    return {
+      id: `REQ#${req.requestId.toString()}`,
+      assetRequested: `${Number(amount).toLocaleString()} ${borrowToken?.symbol || ""}`,
+      collateralOffered: collateralToken?.symbol || "Unknown",
+      status: uiStatus,
+      onCancelClick: () => toast.success(`Cancelling request #${req.requestId.toString()}`),
+    };
+  });
+
+  const hasBorrowerData = borrowerLoans.length > 0 || borrowerPendingRequests.length > 0;
   const hasLenderData = lenderOffers.length > 0;
-  const isLoading = borrowerLoansLoading || lenderOffersLoading;
 
-  // Calculate stats
-  const totalBorrowed = borrowerLoans.reduce((sum, loan) => {
-    const amount = parseInt(loan.borrowed);
+  // Calculate borrower stats
+  const totalBorrowed = (borrowerLoanDetails as any[]).reduce((sum, loan) => {
+    const borrowToken = getTokenByAddress(loan.borrowAsset);
+    const principal = borrowToken ? Number(formatUnits(loan.principalAmount, borrowToken.decimals)) : 0;
+    return sum + principal;
+  }, 0);
+
+  const totalDebt = (borrowerLoanDetails as any[]).reduce((sum, loan) => {
+    const borrowToken = getTokenByAddress(loan.borrowAsset);
+    // Rough estimate: principal + current interest if known, or just principal for now
+    const principal = borrowToken ? Number(formatUnits(loan.principalAmount, borrowToken.decimals)) : 0;
+    const apy = Number(loan.interestRate) / 10000;
+    const timeElapsed = (Date.now() / 1000) - Number(loan.startTime);
+    const interest = principal * apy * (timeElapsed / (365 * 24 * 3600));
+    return sum + principal + interest;
+  }, 0);
+
+  const totalCollateralLocked = (borrowerLoanDetails as any[]).reduce((sum, loan) => {
+    const collatToken = getTokenByAddress(loan.collateralAsset);
+    const amount = collatToken ? Number(formatUnits(loan.collateralAmount, collatToken.decimals)) : 0;
     return sum + amount;
   }, 0);
 
-  const totalDebt = totalBorrowed * 1.016; // Approximate with ~1.6% interest
-  const totalCollateral = borrowerLoans.length * 8.5; // Approximate
-
-  const totalOffered = lenderOffers.reduce((sum, offer) => {
-    const amount = parseInt(offer.assetRequested);
+  // Calculate lender stats
+  const totalOffered = (lenderOfferDetails as any[]).reduce((sum, offer) => {
+    const lendToken = getTokenByAddress(offer.lendAsset);
+    const amount = lendToken ? Number(formatUnits(offer.lendAmount, lendToken.decimals)) : 0;
     return sum + amount;
   }, 0);
+
+  const avgInterest = lenderOfferDetails.length > 0
+    ? (lenderOfferDetails as any[]).reduce((sum, offer) => sum + Number(offer.interestRate), 0) / lenderOfferDetails.length / 100
+    : 0;
 
   return (
     <Box sx={{ display: "flex", height: "100vh", width: "100%", bg: "#101922" }}>
@@ -227,11 +287,10 @@ export const BorrowerDashboardPage: React.FC = () => {
                       />
                       <StatsCard
                         label="Collateral Locked"
-                        value={totalCollateral.toFixed(2)}
+                        value={totalCollateralLocked.toFixed(2)}
                         unit="ETH"
                         icon={<Lock />}
                         iconColor="#22c55e"
-                        trend={{ value: "+2.4% value (24h)", direction: "up" }}
                       />
                     </Box>
 
@@ -240,6 +299,13 @@ export const BorrowerDashboardPage: React.FC = () => {
                       loans={borrowerLoans}
                       onViewHistory={() => console.log("View loan history")}
                     />
+
+                    {/* Pending Requests Table */}
+                    {borrowerPendingRequests.length > 0 && (
+                      <Box sx={{ mt: 4 }}>
+                        <PendingRequestsTable requests={borrowerPendingRequests} />
+                      </Box>
+                    )}
                   </Box>
                 </>
               )}
@@ -277,11 +343,10 @@ export const BorrowerDashboardPage: React.FC = () => {
                       />
                       <StatsCard
                         label="Avg. Interest"
-                        value="8.5"
+                        value={avgInterest.toFixed(1)}
                         unit="%"
                         icon={<Lock />}
                         iconColor="#f59e0b"
-                        trend={{ value: "+1.2% (24h)", direction: "up" }}
                       />
                     </Box>
 

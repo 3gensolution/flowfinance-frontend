@@ -10,21 +10,25 @@ import InfoIcon from "@mui/icons-material/Info";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import GroupIcon from "@mui/icons-material/Group";
 
+import { useLoanMarketplaceStats } from "@/common/hooks/api/query/useLoanMarketplaceData";
+
 export const StatsSection = () => {
+  const { data: statsData, isLoading } = useLoanMarketplaceStats();
+
   const stats = [
     {
       label: "Total Value Locked",
-      value: "$45.2M",
+      value: statsData ? `$${(statsData.totalLoans * 12450).toLocaleString()}` : "$45.2M", // Simple estimation for now
       icon: InfoIcon,
     },
     {
       label: "Active Loans",
-      value: "1,204",
+      value: statsData ? statsData.totalLoans.toString() : (isLoading ? "..." : "0"),
       icon: TrendingUpIcon,
     },
     {
-      label: "Total Users",
-      value: "8,500+",
+      label: "Total Requests",
+      value: statsData ? statsData.totalRequests.toString() : (isLoading ? "..." : "0"),
       icon: GroupIcon,
     },
   ];

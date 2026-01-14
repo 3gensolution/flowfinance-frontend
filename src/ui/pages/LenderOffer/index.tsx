@@ -149,7 +149,7 @@ export const LenderOfferPage: React.FC = () => {
   const handleSetMaxLendAmount = () => {
     if (lendTokenBalance) {
       const maxAmount = formatUnits(lendTokenBalance, lendToken.decimals);
-      setAmount(maxAmount.split('.')[0]);
+      setAmount(maxAmount.split('.')[0] || "0");
     }
   };
 

@@ -28,26 +28,38 @@ export interface LoanCardProps {
   fundedPercentage: number;
   collateralIcon?: string;
   riskColor?: string;
-  onFundClick: () => void;
+  buttonLabel?: string;
+  actionType?: "fund" | "borrow";
+  rawId?: bigint;
+  rawAmount?: bigint;
+  rawToken?: `0x${string}`;
+  rawCollateralToken?: `0x${string}`;
+  rawCollateralAmount?: bigint;
+  rawCreatorAddress?: `0x${string}`;
+  hideButton?: boolean;
+  onFundClick?: (props: LoanCardProps) => void;
 }
 
-export const LoanCard = ({
-  id,
-  borrowerAddress,
-  isVerified = false,
-  timeAgo,
-  riskLevel,
-  borrowAmount,
-  borrowToken,
-  collateralAmount,
-  collateralToken,
-  apy,
-  ltv,
-  duration,
-  expiresIn,
-  fundedPercentage,
-  onFundClick,
-}: LoanCardProps) => {
+export const LoanCard = (props: LoanCardProps) => {
+  const {
+    id,
+    borrowerAddress,
+    isVerified = false,
+    timeAgo,
+    riskLevel,
+    borrowAmount,
+    borrowToken,
+    collateralAmount,
+    collateralToken,
+    apy,
+    ltv,
+    duration,
+    expiresIn,
+    fundedPercentage,
+    onFundClick,
+    buttonLabel = "Fund Loan",
+    hideButton = false,
+  } = props;
   // id is used for React key in parent component
   void id;
   const getRiskColor = () => {
@@ -214,24 +226,26 @@ export const LoanCard = ({
             <AccessTimeIcon sx={{ fontSize: "0.875rem" }} />
             <span>Expires in {expiresIn}</span>
           </Box>
-          <Button
-            variant="contained"
-            onClick={onFundClick}
-            sx={{
-              backgroundColor: "#2b8cee",
-              color: "white",
-              fontWeight: 700,
-              fontSize: "0.875rem",
-              textTransform: "none",
-              px: 2,
-              py: 1,
-              "&:hover": {
-                backgroundColor: "rgba(43, 140, 238, 0.9)",
-              },
-            }}
-          >
-            Fund Loan
-          </Button>
+          {!hideButton && (
+            <Button
+              variant="contained"
+              onClick={() => onFundClick?.(props)}
+              sx={{
+                backgroundColor: "#2b8cee",
+                color: "white",
+                fontWeight: 700,
+                fontSize: "0.875rem",
+                textTransform: "none",
+                px: 2,
+                py: 1,
+                "&:hover": {
+                  backgroundColor: "rgba(43, 140, 238, 0.9)",
+                },
+              }}
+            >
+              {buttonLabel}
+            </Button>
+          )}
         </Box>
       </Box>
 

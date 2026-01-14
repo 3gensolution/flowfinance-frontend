@@ -14,44 +14,12 @@ import {
   useTheme,
 } from "@mui/material";
 
+import { useRecentFundedLoans } from "@/common/hooks/api/query/useLoanMarketplaceData";
+
 export const LoanFeedSection = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-
-  const loans = [
-    {
-      borrower: "0x4a...9b21",
-      collateral: "ETH",
-      collateralColor: "#4f46e5",
-      amount: "24,500 USDC",
-      apr: "4.5%",
-      time: "2 mins ago",
-    },
-    {
-      borrower: "0x8f...2c19",
-      collateral: "WBTC",
-      collateralColor: "#f97316",
-      amount: "100,000 DAI",
-      apr: "3.8%",
-      time: "5 mins ago",
-    },
-    {
-      borrower: "0x1d...e440",
-      collateral: "MATIC",
-      collateralColor: "#a855f7",
-      amount: "5,200 USDC",
-      apr: "5.1%",
-      time: "12 mins ago",
-    },
-    {
-      borrower: "0x7c...a101",
-      collateral: "ETH",
-      collateralColor: "#4f46e5",
-      amount: "12,000 USDC",
-      apr: "4.5%",
-      time: "18 mins ago",
-    },
-  ];
+  const { data: loans = [] } = useRecentFundedLoans(4);
 
   return (
     <Box component="section" sx={{ py: 10 }}>
@@ -240,7 +208,7 @@ export const LoanFeedSection = () => {
           50% { opacity: 0.5; }
         }
       `}</style>
-      </Box>
+    </Box>
     // </Box>
   );
 };

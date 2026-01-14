@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePublicClient, useWriteContract, useAccount } from "wagmi";
 import { collateralContract } from "@/common/lib/contract-addresses";
+import { tokensAbi } from "@/common/abi/tokensAbi";
 
 /**
  * Helper type for contract simulation error handling
@@ -41,6 +42,28 @@ export const useDepositCollateral = () => {
     }) => {
       if (!publicClient) throw new Error("Public client not available");
       if (!account) throw new Error("Wallet not connected");
+
+      // Check allowance
+      const allowance = await publicClient.readContract({
+        address: params.token,
+        abi: tokensAbi,
+        functionName: "allowance",
+        args: [account, collateralContract.address as `0x${string}`],
+      });
+
+      if (allowance < params.amount) {
+        console.log("Insufficient allowance, requesting approval...");
+        const approvalHash = await writeContractAsync({
+          address: params.token,
+          abi: tokensAbi,
+          functionName: "approve",
+          args: [collateralContract.address as `0x${string}`, params.amount],
+        });
+
+        console.log("Waiting for approval confirmation...");
+        await publicClient.waitForTransactionReceipt({ hash: approvalHash });
+        console.log("Approval confirmed.");
+      }
 
       const contractConfig = {
         address: collateralContract.address as `0x${string}`,

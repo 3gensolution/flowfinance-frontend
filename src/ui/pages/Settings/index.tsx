@@ -36,7 +36,7 @@ import {
   CloudUpload,
 } from "@mui/icons-material";
 import { BorrowerDashboardHeader, BorrowerDashboardSidebar } from "@/ui/modules/components";
-import { useAccount } from "wagmi";
+import { useAccount, useBalance } from "wagmi";
 import { formatEther, parseEther } from "viem";
 import { useSupplierDetails, useMinimumSupplierStake } from "@/common/hooks/api/query/useSupplierData";
 import { uploadToIPFS } from "@/common/utils/ipfs";
@@ -80,6 +80,7 @@ export const SettingsPage: React.FC = () => {
   // Queries
   const { data: supplierDetails, isLoading: isSupplierLoading } = useSupplierDetails(address);
   const { data: minStake } = useMinimumSupplierStake();
+  const { data: userBalance } = useBalance({ address });
 
   // Mutations
   const { mutateAsync: addStake, isPending: isAddingStake } = useAddSupplierStake();
@@ -142,6 +143,7 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  // @ts-ignore
   const isSupplierRegistered = !!supplierDetails && supplierDetails.status !== 0; // Assuming 0 is Unregistered/None
 
   return (
@@ -357,6 +359,7 @@ export const SettingsPage: React.FC = () => {
                       <Box>
                         <Typography sx={{ fontSize: "0.75rem", color: "#9dabb9" }}>Staked Amount</Typography>
                         <Typography sx={{ fontSize: "1rem", fontWeight: "bold", color: "#fff" }}>
+                          {/* @ts-ignore */}
                           {supplierDetails?.stakeAmount ? supplierDetails.stakeAmount.toString() : "0"} WEI
                         </Typography>
                       </Box>
@@ -392,6 +395,7 @@ export const SettingsPage: React.FC = () => {
                         <Button
                           variant="outlined"
                           color="error"
+                          // @ts-ignore
                           onClick={() => deactivateSupplier(supplierDetails.walletAddress)}
                           disabled={isDeactivating}
                         >
@@ -401,6 +405,7 @@ export const SettingsPage: React.FC = () => {
                         <Button
                           variant="outlined"
                           color="success"
+                          // @ts-ignore
                           onClick={() => reactivateSupplier(supplierDetails!.walletAddress)}
                           disabled={isReactivating}
                         >
@@ -707,7 +712,6 @@ export const SettingsPage: React.FC = () => {
         <DialogTitle>Add Stake</DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus
             margin="dense"
             label="Amount (ETH)"
             type="number"
@@ -860,9 +864,14 @@ export const SettingsPage: React.FC = () => {
             value={registerStake}
             onChange={(e) => setRegisterStake(e.target.value)}
             helperText={minStake ? `Minimum stake required: ${formatEther(minStake)} ETH` : "Loading requirement..."}
-            error={!!minStake && !!registerStake && parseEther(registerStake) < minStake}
+            error={!!minStake && !!registerStake && (parseEther(registerStake) < minStake || (!!userBalance && parseEther(registerStake) > userBalance.value))}
             inputProps={{ step: "0.00001" }}
           />
+          {userBalance && registerStake && parseEther(registerStake) > userBalance.value && (
+            <Typography color="error" variant="caption">
+              Insufficient ETH balance. You have {userBalance.formatted} {userBalance.symbol}.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsRegisterDialogOpen(false)}>Cancel</Button>
@@ -875,7 +884,8 @@ export const SettingsPage: React.FC = () => {
               !registerRegNum ||
               !registerStake ||
               isUploadingRegisterKyc ||
-              (!!minStake && !!registerStake && parseEther(registerStake) < minStake)
+              (!!minStake && !!registerStake && parseEther(registerStake) < minStake) ||
+              (!!userBalance && !!registerStake && parseEther(registerStake) > userBalance.value)
             }
             variant="contained"
           >

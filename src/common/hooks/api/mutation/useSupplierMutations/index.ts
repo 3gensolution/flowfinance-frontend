@@ -42,6 +42,12 @@ export const useRegisterSupplier = () => {
       if (!publicClient) throw new Error("Public client not available");
       if (!account) throw new Error("Wallet not connected");
 
+      // Check balance (ETH) for stake and gas
+      const balance = await publicClient.getBalance({ address: account });
+      if (balance < params.stakeAmount) {
+        throw new Error(`Insufficient balance. You need ${params.stakeAmount.toString()} WEI but have ${balance.toString()} WEI.`);
+      }
+
       const contractConfig = {
         address: supplyRegisterContract.address as `0x${string}`,
         abi: supplyRegisterContract.abi,
